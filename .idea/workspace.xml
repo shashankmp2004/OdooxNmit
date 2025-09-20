@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="d56140f4-ceec-4d43-8036-c574aa9d4f28" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/api/auth/[...nextauth]/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/clear-data.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/clear-data.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/manufacturing-orders-table-old.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/accordion.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/alert.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/aspect-ratio.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/avatar.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/breadcrumb.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/carousel.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/chart.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/checkbox.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/collapsible.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/command.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/context-menu.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/drawer.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/form.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/hover-card.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/input-otp.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/loading-spinner.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/menubar.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/navigation-menu.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/pagination.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/radio-group.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/resizable.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/separator.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/sheet.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/sidebar.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/skeleton.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/tabs.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/textarea.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/toast.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/toaster.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/toggle-group.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/toggle.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/tooltip.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/use-mobile.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/auth.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/auth.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/database/custom-query.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/database/export.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/database/query.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/database/tables.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/manufacturing-orders/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/manufacturing-orders/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/products/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/products/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/stats.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/stock/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/stock/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/users/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/users/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/work-orders/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/admin/work-orders/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/auth/[...nextauth].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/auth/me.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/mos/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/mos/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/products/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/products/[id]/bom.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/products/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/socketio.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/stock/[productId].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/stock/entries.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/stock/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/stock/manual.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/stock/summary.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/work-orders/[id].ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/work-orders/[id]/comments.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/work-orders/[id]/complete.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/work-orders/[id]/pause.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/work-orders/[id]/progress.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/work-orders/[id]/start.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/api/work-orders/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/styles/globals.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-api.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-auth.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-db-connection.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-product-api.js" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;chocothunder5013&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/shashankmp2004/OdooxNmit.git&quot;,
+    &quot;accountId&quot;: &quot;d3b5ed5f-15b3-4b59-bf1a-0f9820b628d5&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="32yHvLASEnBnMwbd8LWU1E8Mcnu" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;vercdep&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/ishan/OneDrive/Documents/OdooxNmit-backend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\ishan\\OneDrive\\Documents\\OdooxNmit-backend\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager" selected="npm.Next.js: server-side">
+    <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
+      <method v="2" />
+    </configuration>
+    <configuration name="Next.js: server-side" type="js.build_tools.npm">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="dev" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-WS-252.25557.126" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d56140f4-ceec-4d43-8036-c574aa9d4f28" name="Changes" comment="" />
+      <created>1758386123984</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1758386123984</updated>
+      <workItem from="1758386124750" duration="12000" />
+      <workItem from="1758386140982" duration="6868000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName=".env" />
+  </component>
+</project>

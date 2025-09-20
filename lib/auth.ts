@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export type UserRole = "ADMIN" | "MANAGER" | "OPERATOR" | "INVENTORY";
+export type UserRole = "admin" | "manager" | "operator" | "inventory_manager"; // Updated enum values
 
 export interface AuthenticatedRequest extends NextApiRequest {
   user: {
@@ -43,8 +43,8 @@ export function requireRole(
     const userRole = req.user.role;
     const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
-    // ADMIN always has access
-    if (userRole === "ADMIN" || allowedRoles.includes(userRole)) {
+    // admin always has access (updated to lowercase)
+    if (userRole === "admin" || allowedRoles.includes(userRole)) {
       return handler(req, res);
     }
 
@@ -55,32 +55,32 @@ export function requireRole(
 // Role-based permissions helper
 export const permissions = {
   // Manufacturing Orders
-  canCreateMO: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
-  canViewMO: (role: UserRole) => ["ADMIN", "MANAGER", "OPERATOR", "INVENTORY"].includes(role),
-  canEditMO: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
-  canDeleteMO: (role: UserRole) => ["ADMIN"].includes(role),
+  canCreateMO: (role: UserRole) => ["admin", "manager"].includes(role),
+  canViewMO: (role: UserRole) => ["admin", "manager", "operator", "inventory_manager"].includes(role),
+  canEditMO: (role: UserRole) => ["admin", "manager"].includes(role),
+  canDeleteMO: (role: UserRole) => ["admin"].includes(role),
 
   // Work Orders
-  canCreateWO: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
-  canViewWO: (role: UserRole) => ["ADMIN", "MANAGER", "OPERATOR"].includes(role),
-  canEditWO: (role: UserRole) => ["ADMIN", "MANAGER", "OPERATOR"].includes(role),
-  canDeleteWO: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
+  canCreateWO: (role: UserRole) => ["admin", "manager"].includes(role),
+  canViewWO: (role: UserRole) => ["admin", "manager", "operator"].includes(role),
+  canEditWO: (role: UserRole) => ["admin", "manager", "operator"].includes(role),
+  canDeleteWO: (role: UserRole) => ["admin", "manager"].includes(role),
 
   // Products & BOM
-  canCreateProduct: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
-  canViewProduct: (role: UserRole) => ["ADMIN", "MANAGER", "OPERATOR", "INVENTORY"].includes(role),
-  canEditProduct: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
-  canDeleteProduct: (role: UserRole) => ["ADMIN"].includes(role),
+  canCreateProduct: (role: UserRole) => ["admin", "manager"].includes(role),
+  canViewProduct: (role: UserRole) => ["admin", "manager", "operator", "inventory_manager"].includes(role),
+  canEditProduct: (role: UserRole) => ["admin", "manager"].includes(role),
+  canDeleteProduct: (role: UserRole) => ["admin"].includes(role),
 
   // Stock Management
-  canViewStock: (role: UserRole) => ["ADMIN", "MANAGER", "INVENTORY"].includes(role),
-  canManualStockAdjustment: (role: UserRole) => ["ADMIN", "INVENTORY"].includes(role),
+  canViewStock: (role: UserRole) => ["admin", "manager", "inventory_manager"].includes(role),
+  canManualStockAdjustment: (role: UserRole) => ["admin", "inventory_manager"].includes(role),
 
   // User Management
-  canManageUsers: (role: UserRole) => ["ADMIN"].includes(role),
-  canViewUsers: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
+  canManageUsers: (role: UserRole) => ["admin"].includes(role),
+  canViewUsers: (role: UserRole) => ["admin", "manager"].includes(role),
 
   // Reports
-  canViewReports: (role: UserRole) => ["ADMIN", "MANAGER", "INVENTORY"].includes(role),
-  canExportReports: (role: UserRole) => ["ADMIN", "MANAGER"].includes(role),
+  canViewReports: (role: UserRole) => ["admin", "manager", "inventory_manager"].includes(role),
+  canExportReports: (role: UserRole) => ["admin", "manager"].includes(role),
 };

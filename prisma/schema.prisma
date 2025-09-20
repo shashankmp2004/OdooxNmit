@@ -7,27 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  ADMIN
-  MANAGER
-  OPERATOR
-  INVENTORY
-}
-
-enum OrderState {
-  PLANNED
-  IN_PROGRESS
-  DONE
-  CANCELED
-}
-
-enum WorkStatus {
-  PENDING
-  STARTED
-  PAUSED
-  COMPLETED
-}
-
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -41,8 +20,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -55,25 +33,6 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id         String   @id @default(uuid())
-  name       String?
-  email      String   @unique
-  role       UserRole @default(OPERATOR)
-  password   String?  // hashed when using credentials
-  avatarUrl  String?
-  emailVerified DateTime?
-  image         String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  accounts    Account[]
-  sessions    Session[]
-  createdMO  ManufacturingOrder[] @relation("CreatedBy")
-  assignedWOs WorkOrder[]         @relation("AssignedTo")
-  comments   Comment[]
-}
-
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -82,161 +41,288 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model User {
+  id                          String               @id @default(uuid())
+  fullName                    String
+  email                       String               @unique
+  passwordHash                String?
+  role                        UserRole             @default(operator)
+  createdAt                   DateTime             @default(now())
+  name                        String?
+  avatarUrl                   String?
+  emailVerified               DateTime?
+  image                       String?
+  updatedAt                   DateTime             @updatedAt
+  accounts                    Account[]
+  comments                    Comment[]
+  sessions                    Session[]
+  assignedManufacturingOrders ManufacturingOrder[] @relation("AssigneeUser")
+  workOrderLogs               WorkOrderLog[]
+  legacyAssignedWorkOrders    WorkOrder[]          @relation("LegacyAssignedTo")
+  assignedWorkOrders          WorkOrder[]          @relation("OperatorUser")
+
+  @@map("users")
+}
+
 model Product {
-  id           String       @id @default(uuid())
-  sku          String?      @unique
-  name         String
-  description  String?
-  category     String?      // Added for frontend compatibility
-  unit         String?      // Added for frontend compatibility (e.g., "pcs", "kg", "lbs")
-  price        Float?       // Added for pricing information
-  stock        Float        @default(0)      // Current stock level
-  minStockAlert Int?        // Added for frontend compatibility - minimum stock alert level
-  bomLink      String?      // Added for frontend compatibility - BOM reference
-  isFinished   Boolean      @default(false)
-  boms         BOM[]        // Changed to one-to-many relationship
-  stockEntries StockEntry[]
+  id                  String               @id @default(uuid())
+  name                String
+  sku                 String               @unique
+  description         String?
+  productType         ProductType
+  currentStock        Int                  @default(0)
+  unitOfMeasure       String
+  updatedAt           DateTime             @default(now()) @updatedAt
+  category            String?
+  price               Float?
+  minStockAlert       Int?
+  bomLink             String?
+  isFinished          Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  bomItems            BOMItem[]            @relation("BOMItemComponent")
+  stockEntries        StockEntry[]
+  bomComponents       BOMComponent[]       @relation("ComponentProduct")
+  materialComponents  BOMComponent[]       @relation("MaterialProduct")
+  boms                BOM?
   manufacturingOrders ManufacturingOrder[]
-  bomComponents BOMComponent[] @relation("MaterialProduct")
-  bomItems     BOMItem[]    @relation("ComponentProduct") // For BOM items where this product is a component
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  stockLedgerEntries  StockLedger[]
+
+  @@map("products")
+}
+
+model WorkCenter {
+  id            String           @id @default(uuid())
+  name          String
+  costPerHour   Decimal?         @db.Decimal(10, 2)
+  status        WorkCenterStatus @default(active)
+  description   String?
+  capacity      Int?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  bomOperations BOMOperation[]
+  workOrders    WorkOrder[]      @relation("WorkCenterWorkOrders")
+
+  @@map("work_centers")
 }
 
 model BOM {
-  id          String        @id @default(uuid())
-  product     Product       @relation(fields: [productId], references: [id])
-  productId   String
-  version     String        @default("v1.0") // BOM version
-  description String?       // BOM description
-  isActive    Boolean       @default(true)   // Active/inactive status
-  components  BOMComponent[] @relation("OldBOM") // Keep old relation for backward compatibility
-  items       BOMItem[]     // New BOM items structure
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                  String               @id @default(uuid())
+  productId           String               @unique
+  name                String
+  description         String?
+  createdAt           DateTime             @default(now())
+  version             String               @default("v1.0")
+  isActive            Boolean              @default(true)
+  updatedAt           DateTime             @updatedAt
+  items               BOMItem[]
+  bomComponents       BOMComponent[]
+  bomOperations       BOMOperation[]
+  product             Product              @relation(fields: [productId], references: [id])
+  manufacturingOrders ManufacturingOrder[]
 
-  @@unique([productId, version]) // Ensure unique version per product
+  @@map("boms")
+}
+
+model BOMComponent {
+  id                 String   @id @default(uuid())
+  bomId              String
+  componentProductId String
+  quantity           Decimal  @db.Decimal(10, 2)
+  materialId         String?
+  qtyPerUnit         Float?
+  unit               String?
+  cost               Float?
+  createdAt          DateTime @default(now())
+  bom                BOM      @relation(fields: [bomId], references: [id])
+  componentProduct   Product  @relation("ComponentProduct", fields: [componentProductId], references: [id])
+  material           Product? @relation("MaterialProduct", fields: [materialId], references: [id])
+
+  @@map("bom_components")
+}
+
+model BOMOperation {
+  id                       String     @id @default(uuid())
+  bomId                    String
+  workCenterId             String
+  operationName            String
+  sequence                 Int
+  estimatedDurationMinutes Int
+  bom                      BOM        @relation(fields: [bomId], references: [id])
+  workCenter               WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@map("bom_operations")
+}
+
+model ManufacturingOrder {
+  id                 String        @id @default(uuid())
+  productId          String
+  bomId              String?
+  quantityToProduce  Int
+  status             OrderStatus   @default(Planned)
+  assigneeId         String?
+  scheduledStartDate DateTime
+  actualStartDate    DateTime?
+  completionDate     DateTime?
+  createdAt          DateTime      @default(now())
+  orderNo            String?       @unique
+  name               String?
+  quantity           Int?
+  state              OrderStatus?  @default(Planned)
+  deadline           DateTime?
+  bomSnapshot        Json?
+  createdById        String?
+  updatedAt          DateTime      @updatedAt
+  assignee           User?         @relation("AssigneeUser", fields: [assigneeId], references: [id])
+  bom                BOM?          @relation(fields: [bomId], references: [id])
+  product            Product       @relation(fields: [productId], references: [id])
+  stockLedger        StockLedger[]
+  workOrders         WorkOrder[]
+
+  @@map("manufacturing_orders")
+}
+
+model WorkOrder {
+  id                       String             @id @default(uuid())
+  moId                     String
+  workCenterId             String?
+  operatorId               String?
+  operationName            String
+  status                   WorkOrderStatus    @default(Pending)
+  sequence                 Int
+  estimatedDurationMinutes Int?
+  actualStartTime          DateTime?
+  totalTimeSpentMinutes    Int                @default(0)
+  title                    String?
+  taskName                 String?
+  description              String?
+  assignedToId             String?
+  machineWorkCenter        String?
+  priority                 String?            @default("MEDIUM")
+  progress                 Int                @default(0)
+  estimatedTime            Float?
+  actualTime               Float?
+  startTime                DateTime?
+  endTime                  DateTime?
+  durationMin              Int?
+  notes                    String?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  comments                 Comment[]
+  workOrderLogs            WorkOrderLog[]
+  assignedTo               User?              @relation("LegacyAssignedTo", fields: [assignedToId], references: [id])
+  manufacturingOrder       ManufacturingOrder @relation(fields: [moId], references: [id])
+  operator                 User?              @relation("OperatorUser", fields: [operatorId], references: [id])
+  workCenter               WorkCenter?        @relation("WorkCenterWorkOrders", fields: [workCenterId], references: [id])
+
+  @@map("work_orders")
+}
+
+model WorkOrderLog {
+  id        String    @id @default(uuid())
+  woId      String
+  userId    String
+  logType   LogType
+  details   String?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  workOrder WorkOrder @relation(fields: [woId], references: [id])
+
+  @@map("work_order_logs")
+}
+
+model StockLedger {
+  id              String              @id @default(uuid())
+  productId       String
+  quantityChange  Int
+  newStockLevel   Int
+  transactionType TransactionType
+  referenceMoId   String?
+  createdAt       DateTime            @default(now())
+  product         Product             @relation(fields: [productId], references: [id])
+  referenceMo     ManufacturingOrder? @relation(fields: [referenceMoId], references: [id])
+
+  @@map("stock_ledger")
 }
 
 model BOMItem {
   id          String   @id @default(uuid())
-  bom         BOM      @relation(fields: [bomId], references: [id], onDelete: Cascade)
   bomId       String
-  component   Product  @relation("ComponentProduct", fields: [componentId], references: [id])
   componentId String
-  quantity    Float    // Quantity needed
-  unit        String   @default("pcs") // Unit of measurement
-  notes       String?  // Optional notes
+  quantity    Float
+  unit        String   @default("pcs")
+  notes       String?
   createdAt   DateTime @default(now())
-}
-
-model BOMComponent {
-  id         String   @id @default(uuid())
-  bom        BOM      @relation("OldBOM", fields: [bomId], references: [id])
-  bomId      String
-  material   Product  @relation("MaterialProduct", fields: [materialId], references: [id])
-  materialId String
-  qtyPerUnit Float
-  unit       String?  // Added for frontend compatibility - unit of measurement
-  cost       Float?   // Added for frontend compatibility - cost per unit
-  createdAt  DateTime @default(now())
-}
-
-model ManufacturingOrder {
-  id           String   @id @default(uuid())
-  orderNo      String   @unique
-  name         String
-  product      Product  @relation(fields: [productId], references: [id])
-  productId    String
-  quantity     Int
-  state        OrderState @default(PLANNED)
-  deadline     DateTime?
-  bomSnapshot  Json?      // store BOM at order creation time (components array)
-  workOrders   WorkOrder[]
-  createdBy    User?      @relation("CreatedBy", fields: [createdById], references: [id])
-  createdById  String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-}
-
-enum WorkPriority {
-  LOW
-  MEDIUM
-  HIGH
-}
-
-model WorkOrder {
-  id           String   @id @default(uuid())
-  mo           ManufacturingOrder @relation(fields: [moId], references: [id])
-  moId         String
-  title        String
-  taskName     String?  // Added for frontend compatibility (alternative name field)
-  description  String?
-  assignedTo   User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
-  assignedToId String?
-  workCenter   WorkCenter? @relation(fields: [workCenterId], references: [id])
-  workCenterId String?
-  machineWorkCenter String? // Added for frontend compatibility - machine/work center name
-  status       WorkStatus @default(PENDING)
-  priority     WorkPriority @default(MEDIUM) // Added for frontend compatibility
-  progress     Int       @default(0) // Added for frontend compatibility - completion percentage (0-100)
-  estimatedTime Float?   // Added for frontend compatibility - estimated time in hours
-  actualTime   Float?    // Added for frontend compatibility - actual time in hours
-  startTime    DateTime?
-  endTime      DateTime?
-  durationMin  Int?
-  notes        String?   // Added for frontend compatibility - work order notes
-  comments     Comment[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  bom         BOM      @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  component   Product  @relation("BOMItemComponent", fields: [componentId], references: [id])
 }
 
 model Comment {
-  id         String @id @default(uuid())
-  workOrder  WorkOrder @relation(fields: [workOrderId], references: [id])
+  id          String    @id @default(uuid())
   workOrderId String
-  author     User? @relation(fields: [authorId], references: [id])
-  authorId   String?
-  content    String
-  createdAt  DateTime @default(now())
-}
-
-enum WorkCenterStatus {
-  AVAILABLE
-  BUSY
-  MAINTENANCE
-  OFFLINE
-}
-
-model WorkCenter {
-  id          String @id @default(uuid())
-  name        String
-  description String?
-  status      WorkCenterStatus @default(AVAILABLE)
-  capacity    Int?    // units per hour
-  costPerHour Float?  // operating cost per hour
-  location    String? // physical location
-  workOrders  WorkOrder[] // relation to work orders
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-enum StockEntryType {
-  IN
-  OUT
+  authorId    String?
+  content     String
+  createdAt   DateTime  @default(now())
+  author      User?     @relation(fields: [authorId], references: [id])
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
 }
 
 model StockEntry {
-  id           String @id @default(uuid())
-  product      Product @relation(fields: [productId], references: [id])
+  id           String   @id @default(uuid())
   productId    String
-  type         StockEntryType // Added for frontend compatibility (IN/OUT instead of positive/negative change)
-  quantity     Float    // Added for frontend compatibility - always positive quantity
-  change       Float    // Keep existing field for backward compatibility - negative for consumption, positive for addition
-  reference    String?  // Added for frontend compatibility - reference number/code
-  notes        String?  // Added for frontend compatibility - entry notes
-  sourceType   String?  // e.g., "MO_COMPLETION", "MANUAL", "PURCHASE"
-  sourceId     String?  // id of MO or WO or receipt
+  type         String?
+  quantity     Float?
+  change       Float
+  reference    String?
+  notes        String?
+  sourceType   String?
+  sourceId     String?
   balanceAfter Float?
   createdAt    DateTime @default(now())
+  product      Product  @relation(fields: [productId], references: [id])
+}
+
+enum UserRole {
+  manager
+  operator
+  inventory_manager
+  admin
+}
+
+enum ProductType {
+  raw_material
+  finished_good
+}
+
+enum WorkCenterStatus {
+  active
+  maintenance
+  inactive
+}
+
+enum OrderStatus {
+  Planned
+  In_Progress
+  Done
+  Canceled
+}
+
+enum WorkOrderStatus {
+  Pending
+  Started
+  Paused
+  Completed
+}
+
+enum LogType {
+  comment
+  issue
+  delay
+  status_change
+}
+
+enum TransactionType {
+  consumption
+  production
+  initial_stock
+  adjustment
 }
