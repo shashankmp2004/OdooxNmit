@@ -73,6 +73,25 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // If user navigates to /auth but already has a valid session, skip login and go to dashboard
+  if (pathname === "/auth" || pathname.startsWith("/auth/")) {
+    const tokenAtAuth = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (tokenAtAuth) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/dashboard";
+      const r = NextResponse.redirect(url);
+      r.headers.set("Content-Security-Policy", csp);
+      r.headers.set("X-Frame-Options", "DENY");
+      r.headers.set("X-Content-Type-Options", "nosniff");
+      r.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+      r.headers.set(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+      );
+      return r;
+    }
+  }
+
   // Public routes do not require auth
   for (const pub of PUBLIC_PATHS) {
     if (pathname === pub || pathname.startsWith(`${pub}/`)) {
