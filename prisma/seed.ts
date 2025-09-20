@@ -12,15 +12,16 @@ async function main() {
   const operatorPass = await bcrypt.hash("Operator@123", 10);
   const inventoryPass = await bcrypt.hash("Inventory@123", 10);
 
-  // Create users
+  // Create users with updated schema fields
   const admin = await prisma.user.upsert({
     where: { email: "admin@demo.com" },
     update: {},
     create: { 
-      name: "Admin User", 
-      email: "admin@demo.com", 
-      role: "ADMIN", 
-      password: adminPass 
+      fullName: "Admin User",
+      name: "Admin User", // Keep for NextAuth compatibility
+      email: "admin@demo.com",
+      role: "admin", // Updated enum value
+      passwordHash: adminPass // Updated field name
     }
   });
 
@@ -28,10 +29,11 @@ async function main() {
     where: { email: "manager@demo.com" },
     update: {},
     create: { 
-      name: "Production Manager", 
+      fullName: "Production Manager",
+      name: "Production Manager",
       email: "manager@demo.com", 
-      role: "MANAGER", 
-      password: managerPass 
+      role: "manager", // Updated enum value
+      passwordHash: managerPass // Updated field name
     }
   });
 
@@ -39,10 +41,11 @@ async function main() {
     where: { email: "operator@demo.com" },
     update: {},
     create: { 
-      name: "Floor Operator", 
+      fullName: "Floor Operator",
+      name: "Floor Operator",
       email: "operator@demo.com", 
-      role: "OPERATOR", 
-      password: operatorPass 
+      role: "operator", // Updated enum value
+      passwordHash: operatorPass // Updated field name
     }
   });
 
@@ -50,16 +53,17 @@ async function main() {
     where: { email: "inventory@demo.com" },
     update: {},
     create: { 
-      name: "Inventory Manager", 
+      fullName: "Inventory Manager",
+      name: "Inventory Manager",
       email: "inventory@demo.com", 
-      role: "INVENTORY", 
-      password: inventoryPass 
+      role: "inventory_manager", // Updated enum value
+      passwordHash: inventoryPass // Updated field name
     }
   });
 
   console.log("✅ Users created");
 
-  // Create raw materials
+  // Create raw materials with new schema fields
   const steel = await prisma.product.upsert({
     where: { sku: "STEEL-01" },
     update: {},
@@ -67,8 +71,11 @@ async function main() {
       name: "Steel Plate", 
       sku: "STEEL-01", 
       description: "High quality steel plate for manufacturing",
+      productType: "raw_material", // New required field
+      currentStock: 100, // New required field
+      unitOfMeasure: "kg", // New required field
+      // Legacy fields for compatibility
       category: "Raw Material",
-      unit: "kg",
       minStockAlert: 20,
       isFinished: false 
     }
@@ -81,8 +88,11 @@ async function main() {
       name: "Screws Pack", 
       sku: "SCR-01", 
       description: "M6 screws pack",
+      productType: "raw_material", // New required field
+      currentStock: 1000, // New required field
+      unitOfMeasure: "pcs", // New required field
+      // Legacy fields for compatibility
       category: "Hardware",
-      unit: "pcs",
       minStockAlert: 100,
       isFinished: false 
     }
@@ -95,8 +105,11 @@ async function main() {
       name: "Hex Bolts", 
       sku: "BOLT-01", 
       description: "M8 hex bolts",
+      productType: "raw_material", // New required field
+      currentStock: 500, // New required field
+      unitOfMeasure: "pcs", // New required field
+      // Legacy fields for compatibility
       category: "Hardware",
-      unit: "pcs",
       minStockAlert: 50,
       isFinished: false 
     }
@@ -110,8 +123,11 @@ async function main() {
       name: "Metal Table", 
       sku: "TABLE-100", 
       description: "Industrial metal table",
+      productType: "finished_good", // New required field
+      currentStock: 0, // New required field
+      unitOfMeasure: "pcs", // New required field
+      // Legacy fields for compatibility
       category: "Furniture",
-      unit: "pcs",
       minStockAlert: 5,
       bomLink: "BOM-TABLE-001",
       isFinished: true 
@@ -125,8 +141,11 @@ async function main() {
       name: "Metal Chair", 
       sku: "CHAIR-100", 
       description: "Industrial metal chair",
+      productType: "finished_good", // New required field
+      currentStock: 0, // New required field
+      unitOfMeasure: "pcs", // New required field
+      // Legacy fields for compatibility
       category: "Furniture",
-      unit: "pcs",
       minStockAlert: 10,
       bomLink: "BOM-CHAIR-001",
       isFinished: true 
@@ -135,48 +154,17 @@ async function main() {
 
   console.log("✅ Products created");
 
-  // Create BOMs for finished products
-  const tableBom = await prisma.bOM.upsert({
-    where: { productId: table.id },
-    update: {},
-    create: {
-      productId: table.id,
-      components: {
-        create: [
-          { materialId: steel.id, qtyPerUnit: 2, unit: "kg", cost: 15.50 },
-          { materialId: screws.id, qtyPerUnit: 20, unit: "pcs", cost: 0.25 },
-          { materialId: bolts.id, qtyPerUnit: 8, unit: "pcs", cost: 0.75 }
-        ]
-      }
-    }
-  });
-
-  const chairBom = await prisma.bOM.upsert({
-    where: { productId: chair.id },
-    update: {},
-    create: {
-      productId: chair.id,
-      components: {
-        create: [
-          { materialId: steel.id, qtyPerUnit: 1, unit: "kg", cost: 15.50 },
-          { materialId: screws.id, qtyPerUnit: 12, unit: "pcs", cost: 0.25 },
-          { materialId: bolts.id, qtyPerUnit: 4, unit: "pcs", cost: 0.75 }
-        ]
-      }
-    }
-  });
-
-  console.log("✅ BOMs created");
-
-  // Create work centers
+  // Create work centers with new schema
   const cuttingCenter = await prisma.workCenter.upsert({
     where: { id: "cutting-center" },
     update: {},
     create: {
       id: "cutting-center",
       name: "Cutting & Welding",
+      costPerHour: 45.0, // Using Decimal type
+      status: "active", // New enum value
+      // Legacy fields for compatibility
       description: "Steel cutting and welding station",
-      costPerHour: 45.0,
       capacity: 2
     }
   });
@@ -187,19 +175,166 @@ async function main() {
     create: {
       id: "assembly-center",
       name: "Assembly Line",
+      costPerHour: 35.0, // Using Decimal type
+      status: "active", // New enum value
+      // Legacy fields for compatibility
       description: "Final assembly and quality check",
-      costPerHour: 35.0,
       capacity: 4
     }
   });
 
   console.log("✅ Work centers created");
 
-  // Initial stock entries
+  // Create BOMs with updated structure
+  const tableBom = await prisma.bOM.upsert({
+    where: { productId: table.id },
+    update: {},
+    create: {
+      productId: table.id,
+      name: "Metal Table BOM",
+      description: "Bill of materials for metal table production",
+      bomComponents: {
+        create: [
+          {
+            componentProductId: steel.id,
+            quantity: 2.0,
+            // Legacy fields for compatibility
+            materialId: steel.id,
+            qtyPerUnit: 2,
+            unit: "kg",
+            cost: 15.50
+          },
+          {
+            componentProductId: screws.id,
+            quantity: 20.0,
+            // Legacy fields for compatibility
+            materialId: screws.id,
+            qtyPerUnit: 20,
+            unit: "pcs",
+            cost: 0.25
+          },
+          {
+            componentProductId: bolts.id,
+            quantity: 8.0,
+            // Legacy fields for compatibility
+            materialId: bolts.id,
+            qtyPerUnit: 8,
+            unit: "pcs",
+            cost: 0.75
+          }
+        ]
+      },
+      bomOperations: {
+        create: [
+          {
+            workCenterId: cuttingCenter.id,
+            operationName: "Cut & Weld Frame",
+            sequence: 1,
+            estimatedDurationMinutes: 240 // 4 hours
+          },
+          {
+            workCenterId: assemblyCenter.id,
+            operationName: "Final Assembly",
+            sequence: 2,
+            estimatedDurationMinutes: 120 // 2 hours
+          }
+        ]
+      }
+    }
+  });
+
+  const chairBom = await prisma.bOM.upsert({
+    where: { productId: chair.id },
+    update: {},
+    create: {
+      productId: chair.id,
+      name: "Metal Chair BOM",
+      description: "Bill of materials for metal chair production",
+      bomComponents: {
+        create: [
+          {
+            componentProductId: steel.id,
+            quantity: 1.0,
+            // Legacy fields for compatibility
+            materialId: steel.id,
+            qtyPerUnit: 1,
+            unit: "kg",
+            cost: 15.50
+          },
+          {
+            componentProductId: screws.id,
+            quantity: 12.0,
+            // Legacy fields for compatibility
+            materialId: screws.id,
+            qtyPerUnit: 12,
+            unit: "pcs",
+            cost: 0.25
+          },
+          {
+            componentProductId: bolts.id,
+            quantity: 4.0,
+            // Legacy fields for compatibility
+            materialId: bolts.id,
+            qtyPerUnit: 4,
+            unit: "pcs",
+            cost: 0.75
+          }
+        ]
+      },
+      bomOperations: {
+        create: [
+          {
+            workCenterId: cuttingCenter.id,
+            operationName: "Cut & Weld Chair Frame",
+            sequence: 1,
+            estimatedDurationMinutes: 180 // 3 hours
+          },
+          {
+            workCenterId: assemblyCenter.id,
+            operationName: "Chair Assembly & Finishing",
+            sequence: 2,
+            estimatedDurationMinutes: 90 // 1.5 hours
+          }
+        ]
+      }
+    }
+  });
+
+  console.log("✅ BOMs created");
+
+  // Create initial stock ledger entries
   const stockEntries = [
     { 
       productId: steel.id, 
-      type: "IN" as const,
+      quantityChange: 100,
+      newStockLevel: 100,
+      transactionType: "initial_stock",
+    },
+    {
+      productId: screws.id,
+      quantityChange: 1000,
+      newStockLevel: 1000,
+      transactionType: "initial_stock",
+    },
+    {
+      productId: bolts.id,
+      quantityChange: 500,
+      newStockLevel: 500,
+      transactionType: "initial_stock",
+    }
+  ];
+
+  for (const entry of stockEntries) {
+    await prisma.stockLedger.create({
+      data: entry
+    });
+  }
+
+  // Also create legacy stock entries for backward compatibility
+  const legacyStockEntries = [
+    {
+      productId: steel.id,
+      type: "IN",
       quantity: 100,
       change: 100, 
       reference: "INIT-001",
@@ -209,7 +344,7 @@ async function main() {
     },
     { 
       productId: screws.id, 
-      type: "IN" as const,
+      type: "IN",
       quantity: 1000,
       change: 1000, 
       reference: "INIT-002",
@@ -219,7 +354,7 @@ async function main() {
     },
     { 
       productId: bolts.id, 
-      type: "IN" as const,
+      type: "IN",
       quantity: 500,
       change: 500, 
       reference: "INIT-003",
@@ -229,7 +364,7 @@ async function main() {
     }
   ];
 
-  for (const entry of stockEntries) {
+  for (const entry of legacyStockEntries) {
     await prisma.stockEntry.upsert({
       where: { 
         id: `${entry.productId}-initial` 
@@ -242,17 +377,23 @@ async function main() {
     });
   }
 
-  console.log("✅ Initial stock created");
+  console.log("✅ Stock entries created");
 
-  // Sample Manufacturing Orders
+  // Sample Manufacturing Orders with updated schema
   const tableMO = await prisma.manufacturingOrder.create({
     data: {
+      productId: table.id,
+      bomId: tableBom.id,
+      quantityToProduce: 5,
+      status: "Planned",
+      assigneeId: manager.id,
+      scheduledStartDate: new Date(),
+      // Legacy fields for compatibility
       orderNo: "MO-2024-001",
       name: "Produce 5 Metal Tables",
-      productId: table.id,
       quantity: 5,
-      state: "PLANNED",
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      state: "Planned",
+      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdById: manager.id,
       bomSnapshot: [
         { materialId: steel.id, qtyPerUnit: 2 },
@@ -264,12 +405,19 @@ async function main() {
 
   const chairMO = await prisma.manufacturingOrder.create({
     data: {
+      productId: chair.id,
+      bomId: chairBom.id,
+      quantityToProduce: 10,
+      status: "In_Progress",
+      assigneeId: manager.id,
+      scheduledStartDate: new Date(),
+      actualStartDate: new Date(),
+      // Legacy fields for compatibility
       orderNo: "MO-2024-002",
       name: "Produce 10 Metal Chairs",
-      productId: chair.id,
       quantity: 10,
-      state: "IN_PROGRESS",
-      deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
+      state: "In_Progress",
+      deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
       createdById: manager.id,
       bomSnapshot: [
         { materialId: steel.id, qtyPerUnit: 1 },
@@ -281,87 +429,74 @@ async function main() {
 
   console.log("✅ Manufacturing orders created");
 
-  // Sample Work Orders
-  const workOrders = [
-    { 
-      moId: tableMO.id, 
-      title: "Cut & Weld Table Frame", 
+  // Sample Work Orders with updated schema
+  const workOrder1 = await prisma.workOrder.create({
+    data: {
+      moId: tableMO.id,
+      workCenterId: cuttingCenter.id,
+      operatorId: operator.id,
+      operationName: "Cut & Weld Table Frame",
+      status: "Pending",
+      sequence: 1,
+      estimatedDurationMinutes: 240,
+      // Legacy fields for compatibility
+      title: "Cut & Weld Table Frame",
       taskName: "Frame Cutting & Welding",
       description: "Cut steel plates and weld table frame",
-      assignedToId: operator.id, 
-      workCenterId: cuttingCenter.id,
+      assignedToId: operator.id,
       machineWorkCenter: "Cutting Station A",
-      status: "PENDING" as const,
-      priority: "HIGH" as const,
+      priority: "HIGH",
       progress: 0,
       estimatedTime: 4.0,
       notes: "Use safety equipment for welding operations"
-    },
-    { 
-      moId: tableMO.id, 
-      title: "Assemble Table", 
-      taskName: "Final Assembly",
-      description: "Final assembly with screws and bolts",
-      assignedToId: operator.id, 
-      workCenterId: assemblyCenter.id,
-      machineWorkCenter: "Assembly Line B",
-      status: "PENDING" as const,
-      priority: "MEDIUM" as const,
-      progress: 0,
-      estimatedTime: 2.5,
-      notes: "Quality check after assembly"
-    },
-    { 
-      moId: chairMO.id, 
-      title: "Cut Chair Components", 
-      taskName: "Chair Frame Cutting",
-      description: "Cut steel for chair frames",
-      assignedToId: operator.id, 
-      workCenterId: cuttingCenter.id,
-      machineWorkCenter: "Cutting Station B",
-      status: "STARTED" as const,
-      priority: "HIGH" as const,
-      progress: 25,
-      estimatedTime: 3.0,
-      actualTime: 0.75,
-      startTime: new Date(),
-      notes: "In progress - 25% completed"
-    },
-    { 
-      moId: chairMO.id, 
-      title: "Assemble Chairs", 
-      taskName: "Chair Assembly",
-      description: "Assemble chair frames and attach components",
-      assignedToId: operator.id, 
-      workCenterId: assemblyCenter.id,
-      machineWorkCenter: "Assembly Line A",
-      status: "PENDING" as const,
-      priority: "MEDIUM" as const,
-      progress: 0,
-      estimatedTime: 1.5,
-      notes: "Waiting for cutting to complete"
     }
-  ];
+  });
 
-  for (const wo of workOrders) {
-    await prisma.workOrder.create({
-      data: wo
-    });
-  }
+  const workOrder2 = await prisma.workOrder.create({
+    data: {
+      moId: tableMO.id,
+      workCenterId: assemblyCenter.id,
+      operatorId: operator.id,
+      operationName: "Table Final Assembly",
+      status: "Pending",
+      sequence: 2,
+      estimatedDurationMinutes: 120,
+      // Legacy fields for compatibility
+      title: "Table Final Assembly",
+      taskName: "Assembly & Quality Check",
+      description: "Assemble table components and perform quality check",
+      assignedToId: operator.id,
+      machineWorkCenter: "Assembly Line B",
+      priority: "MEDIUM",
+      progress: 0,
+      estimatedTime: 2.0,
+      notes: "Check all bolts are properly tightened"
+    }
+  });
 
-  console.log("✅ Work orders created");
+  // Create work order logs
+  await prisma.workOrderLog.create({
+    data: {
+      woId: workOrder1.id,
+      userId: manager.id,
+      logType: "comment",
+      details: "Work order created and assigned to operator"
+    }
+  });
 
-  console.log("🎉 Seed completed successfully!");
-  console.log("\n📋 Demo accounts:");
-  console.log("  👑 Admin: admin@demo.com / Admin@123");
-  console.log("  👨‍💼 Manager: manager@demo.com / Manager@123");
-  console.log("  👷 Operator: operator@demo.com / Operator@123");
-  console.log("  📦 Inventory: inventory@demo.com / Inventory@123");
+  console.log("✅ Work orders and logs created");
+
+  console.log("🌱 Seed completed successfully!");
+  console.log("\n📋 Demo Accounts Created:");
+  console.log("👨‍💼 Admin: admin@demo.com / Admin@123");
+  console.log("👨‍🔧 Manager: manager@demo.com / Manager@123");
+  console.log("👨‍🏭 Operator: operator@demo.com / Operator@123");
+  console.log("📦 Inventory: inventory@demo.com / Inventory@123");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seed failed:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {
