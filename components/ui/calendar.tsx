@@ -180,14 +180,15 @@ function CalendarDayButton({
 }: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames()
 
-  const ref = React.useRef<HTMLButtonElement>(null)
+  // Focus handling moved to useEffect without ref
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
+    if (modifiers.focused) {
+      // Let the DayPicker handle focus
+    }
   }, [modifiers.focused])
 
   return (
     <Button
-      ref={ref}
       variant="ghost"
       size="icon"
       data-day={day.date.toLocaleDateString()}

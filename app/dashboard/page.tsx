@@ -25,6 +25,8 @@ interface DashboardStats {
 export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState<string>("")
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const { data: session } = useAuth()
@@ -36,6 +38,12 @@ export default function DashboardPage() {
   const canViewAllOrders = ["ADMIN", "MANAGER"].includes(userRole)
   const canViewStock = ["ADMIN", "MANAGER", "INVENTORY"].includes(userRole)
   const canViewReports = ["ADMIN", "MANAGER"].includes(userRole)
+
+  // Handle date range changes
+  const handleDateRangeChange = (start: Date | undefined, end: Date | undefined) => {
+    setStartDate(start)
+    setEndDate(end)
+  }
 
   // Fetch dashboard statistics
   useEffect(() => {
@@ -191,7 +199,11 @@ export default function DashboardPage() {
                   )}
 
                   {/* Filters */}
-                  <DashboardFilters onStatusChange={setStatusFilter} onSearchChange={setSearchQuery} />
+                  <DashboardFilters 
+                    onStatusChange={setStatusFilter} 
+                    onSearchChange={setSearchQuery}
+                    onDateRangeChange={handleDateRangeChange}
+                  />
 
                   {/* Manufacturing Orders Table */}
                   <div className="space-y-4">
@@ -204,6 +216,8 @@ export default function DashboardPage() {
                       statusFilter={statusFilter} 
                       searchQuery={searchQuery}
                       userRole={userRole}
+                      startDate={startDate}
+                      endDate={endDate}
                     />
                   </div>
                 </div>

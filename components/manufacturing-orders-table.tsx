@@ -28,9 +28,11 @@ interface ManufacturingOrdersTableProps {
   statusFilter?: string
   searchQuery?: string
   userRole?: string
+  startDate?: Date
+  endDate?: Date
 }
 
-export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole = "OPERATOR" }: ManufacturingOrdersTableProps) {
+export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole = "OPERATOR", startDate, endDate }: ManufacturingOrdersTableProps) {
   const [orders, setOrders] = useState<ManufacturingOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -74,7 +76,19 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
       order.orderNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.name.toLowerCase().includes(searchQuery.toLowerCase())
 
-    return matchesStatus && matchesSearch
+    // Date filtering based on createdAt
+    let matchesDateRange = true
+    if (startDate || endDate) {
+      const orderDate = new Date(order.createdAt)
+      if (startDate && orderDate < startDate) {
+        matchesDateRange = false
+      }
+      if (endDate && orderDate > endDate) {
+        matchesDateRange = false
+      }
+    }
+
+    return matchesStatus && matchesSearch && matchesDateRange
   })
 
   const getStatusColor = (state: string) => {

@@ -26,16 +26,6 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
     onSearchChange?.(value)
   }
 
-  const handleStartDateChange = (date: Date | undefined) => {
-    setStartDate(date)
-    onDateRangeChange?.(date, endDate)
-  }
-
-  const handleEndDateChange = (date: Date | undefined) => {
-    setEndDate(date)
-    onDateRangeChange?.(startDate, date)
-  }
-
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-card p-4 rounded-lg border border-border">
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-1">
@@ -66,42 +56,123 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
         </Select>
 
         {/* Date Range */}
-        <div className="flex gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-32 justify-start text-left font-normal bg-background border-input",
-                  !startDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "MMM dd") : "Start date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={startDate} onSelect={handleStartDateChange} initialFocus />
-            </PopoverContent>
-          </Popover>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Active Date Filter Indicator */}
+          {(startDate || endDate) && (
+            <div className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">
+              {startDate && endDate 
+                ? `${format(startDate, "MMM dd")} - ${format(endDate, "MMM dd")}`
+                : startDate 
+                ? `From ${format(startDate, "MMM dd")}`
+                : `Until ${format(endDate!, "MMM dd")}`
+              }
+            </div>
+          )}
+          
+          {/* Quick Date Range Options */}
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const today = new Date()
+                const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+                setStartDate(lastWeek)
+                setEndDate(today)
+                onDateRangeChange?.(lastWeek, today)
+              }}
+              className="bg-background border-input text-xs"
+            >
+              7d
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const today = new Date()
+                const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+                setStartDate(lastMonth)
+                setEndDate(today)
+                onDateRangeChange?.(lastMonth, today)
+              }}
+              className="bg-background border-input text-xs"
+            >
+              30d
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStartDate(undefined)
+                setEndDate(undefined)
+                onDateRangeChange?.(undefined, undefined)
+              }}
+              className="bg-background border-input text-xs"
+            >
+              Clear
+            </Button>
+          </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-32 justify-start text-left font-normal bg-background border-input",
-                  !endDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "MMM dd") : "End date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={endDate} onSelect={handleEndDateChange} initialFocus />
-            </PopoverContent>
-          </Popover>
+          {/* Custom Date Range */}
+          <div className="flex gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-32 justify-start text-left font-normal bg-background border-input",
+                    !startDate && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "MMM dd") : "Start date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={(date: Date | undefined) => {
+                    if (date) {
+                      setStartDate(date)
+                      onDateRangeChange?.(date, endDate)
+                    }
+                  }}
+                  disabled={(date: Date) => date > new Date() || (endDate && date > endDate)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-32 justify-start text-left font-normal bg-background border-input",
+                    !endDate && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, "MMM dd") : "End date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={(date: Date | undefined) => {
+                    if (date) {
+                      setEndDate(date)
+                      onDateRangeChange?.(startDate, date)
+                    }
+                  }}
+                  disabled={(date: Date) => date > new Date() || (startDate && date < startDate)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
 
