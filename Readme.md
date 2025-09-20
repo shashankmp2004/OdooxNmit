@@ -67,6 +67,13 @@ See `.env.example` and set `NEXTAUTH_SECRET` and `DATABASE_URL`.
 # Usage instructions will be added as the project develops
 ```
 
+## Admin step-up authentication
+
+For sensitive `/admin` pages, a recent password check is required even if you have a valid session cookie. When an admin navigates to any `/admin` route, they'll be redirected to `/auth/admin-verify` to re-enter their password. On success, a short-lived httpOnly cookie is set and access is granted for ~10 minutes. Closing the browser or waiting past that window will require re-verification.
+
+Environment requirements:
+- Ensure `NEXTAUTH_SECRET` is set. It is used to sign the reauth cookie.
+
 ## Project Structure
 ```
 # Project structure will be updated as development progresses

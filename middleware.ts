@@ -12,6 +12,7 @@ const PUBLIC_PATHS = new Set<string>([
 
 // Admin-only path prefixes
 const ADMIN_PREFIXES = ["/admin", "/api/admin"];
+const ADMIN_REAUTH_COOKIE = "admin_reauth";
 
 // API paths that mutate state and should be guarded against CSRF
 const NON_IDEMPOTENT_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -75,6 +76,10 @@ export async function middleware(req: NextRequest) {
 
   // If user navigates to /auth but already has a valid session, skip login and go to dashboard
   if (pathname === "/auth" || pathname.startsWith("/auth/")) {
+    // allow admin verify page even when authenticated
+    if (pathname.startsWith("/auth/admin-verify")) {
+      return res;
+    }
     const tokenAtAuth = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     if (tokenAtAuth) {
       const url = req.nextUrl.clone();
@@ -158,6 +163,72 @@ export async function middleware(req: NextRequest) {
         "camera=(), microphone=(), geolocation=(), interest-cohort=()"
       );
       return r;
+    }
+
+    // Step-up authentication: require recent password re-entry for /admin pages (not API)
+    if (!pathname.startsWith("/api")) {
+      // allow the reauth API itself and verify page from being blocked
+      if (!pathname.startsWith("/auth/admin-verify")) {
+        const cookie = req.cookies.get(ADMIN_REAUTH_COOKIE)?.value;
+        let ok = false;
+        if (cookie) {
+          try {
+            const parts = cookie.split(".");
+            if (parts.length === 3) {
+              const [userId, ts, sig] = parts;
+              const issued = parseInt(ts, 10);
+              const age = Math.floor(Date.now() / 1000) - issued;
+              if (!Number.isNaN(issued) && age >= 0 && age <= 10 * 60) {
+                const secret = process.env.NEXTAUTH_SECRET || "";
+                if (secret) {
+                  const enc = new TextEncoder();
+                  const key = await crypto.subtle.importKey(
+                    "raw",
+                    enc.encode(secret),
+                    { name: "HMAC", hash: "SHA-256" },
+                    false,
+                    ["sign"]
+                  );
+                  const sigBuf = await crypto.subtle.sign(
+                    "HMAC",
+                    key,
+                    enc.encode(`${userId}.${ts}`)
+                  );
+                  // base64url encode
+                  const bytes = new Uint8Array(sigBuf);
+                  let binary = "";
+                  for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                  }
+                  const digest = btoa(binary)
+                    .replace(/=/g, "")
+                    .replace(/\+/g, "-")
+                    .replace(/\//g, "_");
+                  if ((token as any).id === userId && digest === sig) {
+                    ok = true;
+                  }
+                }
+              }
+            }
+          } catch {}
+        }
+
+        if (!ok) {
+          const url = req.nextUrl.clone();
+          url.pathname = "/auth/admin-verify";
+          url.searchParams.set("returnTo", pathname);
+          const r = NextResponse.redirect(url);
+          r.headers.set("Content-Security-Policy", csp);
+          r.headers.set("X-Frame-Options", "DENY");
+          r.headers.set("X-Content-Type-Options", "nosniff");
+          r.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+          r.headers.set(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+          );
+          return r;
+        }
+      }
     }
   }
 

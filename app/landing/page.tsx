@@ -23,13 +23,15 @@ import {
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, Settings as Cog, Shield as ShieldIcon } from "lucide-react";
+import { User, Settings as Cog, Shield as ShieldIcon, LogOut } from "lucide-react";
 import { SignoutDialog } from "@/components/signout-dialog";
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Hero } from "@/app/landing/hero";
 import Stats from "@/app/landing/stats";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LandingPage() {
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -242,45 +244,59 @@ export default function LandingPage() {
                 About
               </Link>
               {status === "authenticated" ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      <span className="hidden lg:inline">{session.user?.name || session.user?.email}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                      Signed in as
-                      <div className="text-xs text-muted-foreground truncate">{session.user?.email}</div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard">Dashboard</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Cog className="h-4 w-4 mr-2" />
-                      Settings
-                    </DropdownMenuItem>
-                    {(session.user as any)?.role === "ADMIN" && (
-                      <>
-                        <DropdownMenuSeparator />
+                <>
+                  <ThemeToggle />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="flex items-center gap-3 px-2">
+                        <Avatar className="size-7">
+                          <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? "User"} />
+                          <AvatarFallback>{(session.user?.name || session.user?.email || "U").slice(0,2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="hidden lg:flex flex-col items-start leading-tight">
+                          <span className="text-sm font-medium">{session.user?.name || session.user?.email}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground uppercase tracking-wide">{(session.user as any)?.role || "USER"}</span>
+                        </div>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-60">
+                      <DropdownMenuLabel>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-8">
+                            <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? "User"} />
+                            <AvatarFallback>{(session.user?.name || session.user?.email || "U").slice(0,2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{session.user?.name || session.user?.email}</div>
+                            <div className="text-xs text-muted-foreground truncate">{session.user?.email}</div>
+                          </div>
+                        </div>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard">Dashboard</Link>
+                      </DropdownMenuItem>
+                      {(session.user as any)?.role === "ADMIN" && (
                         <DropdownMenuItem asChild>
                           <Link href="/admin" className="flex items-center">
                             <ShieldIcon className="h-4 w-4 mr-2" />
                             Admin Portal
                           </Link>
                         </DropdownMenuItem>
-                      </>
-                    )}
-                    <DropdownMenuSeparator />
-                    <SignoutDialog>
-                      <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()}>
-                        Sign out
+                      )}
+                      <DropdownMenuItem>
+                        <Cog className="h-4 w-4 mr-2" />
+                        Settings
                       </DropdownMenuItem>
-                    </SignoutDialog>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <DropdownMenuSeparator />
+                      <SignoutDialog>
+                        <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()} className="text-destructive">
+                          <LogOut className="h-4 w-4 mr-2" /> Sign out
+                        </DropdownMenuItem>
+                      </SignoutDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
               ) : (
                 <>
                   <Button asChild variant="outline" size="sm">

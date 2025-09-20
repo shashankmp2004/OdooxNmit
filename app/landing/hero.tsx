@@ -7,8 +7,10 @@ import { Zap, ArrowRight } from "lucide-react";
 import Typewriter from "typewriter-effect";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 export const Hero = () => {
+  const { status } = useSession();
   return (
     <section className="relative py-32 bg-background overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -51,12 +53,21 @@ export const Hero = () => {
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
-              <Button asChild size="lg" className="h-12 px-8">
-                <Link href="/auth?mode=signup">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              {status === "authenticated" ? (
+                <Button asChild size="lg" className="h-12 px-8">
+                  <Link href="/dashboard">
+                    Dashboard
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              ) : (
+                <Button asChild size="lg" className="h-12 px-8">
+                  <Link href="/auth?mode=signup">
+                    Get Started
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
               <Button
                 asChild
                 variant="outline"
