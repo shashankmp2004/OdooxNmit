@@ -40,31 +40,34 @@ export function AddProductDialog({ open, onOpenChange, onSubmit }: AddProductDia
     }
 
     setIsSubmitting(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    
+    try {
+      await onSubmit?.({
+        name: formData.name,
+        category: formData.category,
+        unit: formData.unit,
+        minStockAlert: Number.parseInt(formData.minStockAlert),
+        bomLink: formData.bomLink || undefined,
+        description: formData.description || undefined,
+        initialStock: Number.parseInt(formData.initialStock),
+      })
 
-    onSubmit?.({
-      name: formData.name,
-      category: formData.category,
-      unit: formData.unit,
-      minStockAlert: Number.parseInt(formData.minStockAlert),
-      bomLink: formData.bomLink || undefined,
-      description: formData.description || undefined,
-      initialStock: Number.parseInt(formData.initialStock),
-    })
-
-    // Reset form
-    setFormData({
-      name: "",
-      category: "",
-      unit: "",
-      minStockAlert: "",
-      bomLink: "",
-      description: "",
-      initialStock: "",
-    })
-    setIsSubmitting(false)
-    onOpenChange(false)
+      // Reset form only on success
+      setFormData({
+        name: "",
+        category: "",
+        unit: "",
+        minStockAlert: "",
+        bomLink: "",
+        description: "",
+        initialStock: "",
+      })
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Error submitting product:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleInputChange = (field: string, value: string) => {

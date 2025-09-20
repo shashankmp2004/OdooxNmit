@@ -67,6 +67,9 @@ async function main() {
       name: "Steel Plate", 
       sku: "STEEL-01", 
       description: "High quality steel plate for manufacturing",
+      category: "Raw Material",
+      unit: "kg",
+      minStockAlert: 20,
       isFinished: false 
     }
   });
@@ -78,6 +81,9 @@ async function main() {
       name: "Screws Pack", 
       sku: "SCR-01", 
       description: "M6 screws pack",
+      category: "Hardware",
+      unit: "pcs",
+      minStockAlert: 100,
       isFinished: false 
     }
   });
@@ -89,6 +95,9 @@ async function main() {
       name: "Hex Bolts", 
       sku: "BOLT-01", 
       description: "M8 hex bolts",
+      category: "Hardware",
+      unit: "pcs",
+      minStockAlert: 50,
       isFinished: false 
     }
   });
@@ -101,6 +110,10 @@ async function main() {
       name: "Metal Table", 
       sku: "TABLE-100", 
       description: "Industrial metal table",
+      category: "Furniture",
+      unit: "pcs",
+      minStockAlert: 5,
+      bomLink: "BOM-TABLE-001",
       isFinished: true 
     }
   });
@@ -112,6 +125,10 @@ async function main() {
       name: "Metal Chair", 
       sku: "CHAIR-100", 
       description: "Industrial metal chair",
+      category: "Furniture",
+      unit: "pcs",
+      minStockAlert: 10,
+      bomLink: "BOM-CHAIR-001",
       isFinished: true 
     }
   });
@@ -126,9 +143,9 @@ async function main() {
       productId: table.id,
       components: {
         create: [
-          { materialId: steel.id, qtyPerUnit: 2 },
-          { materialId: screws.id, qtyPerUnit: 20 },
-          { materialId: bolts.id, qtyPerUnit: 8 }
+          { materialId: steel.id, qtyPerUnit: 2, unit: "kg", cost: 15.50 },
+          { materialId: screws.id, qtyPerUnit: 20, unit: "pcs", cost: 0.25 },
+          { materialId: bolts.id, qtyPerUnit: 8, unit: "pcs", cost: 0.75 }
         ]
       }
     }
@@ -141,9 +158,9 @@ async function main() {
       productId: chair.id,
       components: {
         create: [
-          { materialId: steel.id, qtyPerUnit: 1 },
-          { materialId: screws.id, qtyPerUnit: 12 },
-          { materialId: bolts.id, qtyPerUnit: 4 }
+          { materialId: steel.id, qtyPerUnit: 1, unit: "kg", cost: 15.50 },
+          { materialId: screws.id, qtyPerUnit: 12, unit: "pcs", cost: 0.25 },
+          { materialId: bolts.id, qtyPerUnit: 4, unit: "pcs", cost: 0.75 }
         ]
       }
     }
@@ -180,9 +197,36 @@ async function main() {
 
   // Initial stock entries
   const stockEntries = [
-    { productId: steel.id, change: 100, sourceType: "INITIAL", balanceAfter: 100 },
-    { productId: screws.id, change: 1000, sourceType: "INITIAL", balanceAfter: 1000 },
-    { productId: bolts.id, change: 500, sourceType: "INITIAL", balanceAfter: 500 }
+    { 
+      productId: steel.id, 
+      type: "IN" as const,
+      quantity: 100,
+      change: 100, 
+      reference: "INIT-001",
+      notes: "Initial steel stock",
+      sourceType: "INITIAL", 
+      balanceAfter: 100 
+    },
+    { 
+      productId: screws.id, 
+      type: "IN" as const,
+      quantity: 1000,
+      change: 1000, 
+      reference: "INIT-002",
+      notes: "Initial screws stock",
+      sourceType: "INITIAL", 
+      balanceAfter: 1000 
+    },
+    { 
+      productId: bolts.id, 
+      type: "IN" as const,
+      quantity: 500,
+      change: 500, 
+      reference: "INIT-003",
+      notes: "Initial bolts stock",
+      sourceType: "INITIAL", 
+      balanceAfter: 500 
+    }
   ];
 
   for (const entry of stockEntries) {
@@ -242,35 +286,60 @@ async function main() {
     { 
       moId: tableMO.id, 
       title: "Cut & Weld Table Frame", 
+      taskName: "Frame Cutting & Welding",
       description: "Cut steel plates and weld table frame",
       assignedToId: operator.id, 
       workCenterId: cuttingCenter.id,
-      status: "PENDING" as const
+      machineWorkCenter: "Cutting Station A",
+      status: "PENDING" as const,
+      priority: "HIGH" as const,
+      progress: 0,
+      estimatedTime: 4.0,
+      notes: "Use safety equipment for welding operations"
     },
     { 
       moId: tableMO.id, 
       title: "Assemble Table", 
+      taskName: "Final Assembly",
       description: "Final assembly with screws and bolts",
       assignedToId: operator.id, 
       workCenterId: assemblyCenter.id,
-      status: "PENDING" as const
+      machineWorkCenter: "Assembly Line B",
+      status: "PENDING" as const,
+      priority: "MEDIUM" as const,
+      progress: 0,
+      estimatedTime: 2.5,
+      notes: "Quality check after assembly"
     },
     { 
       moId: chairMO.id, 
       title: "Cut Chair Components", 
+      taskName: "Chair Frame Cutting",
       description: "Cut steel for chair frames",
       assignedToId: operator.id, 
       workCenterId: cuttingCenter.id,
+      machineWorkCenter: "Cutting Station B",
       status: "STARTED" as const,
-      startTime: new Date()
+      priority: "HIGH" as const,
+      progress: 25,
+      estimatedTime: 3.0,
+      actualTime: 0.75,
+      startTime: new Date(),
+      notes: "In progress - 25% completed"
     },
     { 
       moId: chairMO.id, 
       title: "Assemble Chairs", 
+      taskName: "Chair Assembly",
       description: "Assemble chair frames and attach components",
       assignedToId: operator.id, 
       workCenterId: assemblyCenter.id,
-      status: "PENDING" as const
+      machineWorkCenter: "Assembly Line A",
+      status: "PENDING" as const,
+      priority: "MEDIUM" as const,
+      progress: 0,
+      estimatedTime: 1.5,
+      notes: "Waiting for cutting to complete"
     }
   ];
 

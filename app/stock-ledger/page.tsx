@@ -57,7 +57,7 @@ export default function StockLedgerPage() {
     fetchStockStats()
   }, [])
 
-  const handleAddProduct = (data: {
+  const handleAddProduct = async (data: {
     name: string
     category: string
     unit: string
@@ -66,11 +66,62 @@ export default function StockLedgerPage() {
     description?: string
     initialStock: number
   }) => {
-    console.log("Adding product:", data)
-    toast({
-      title: "Product Added",
-      description: `${data.name} has been added to inventory`,
-    })
+    try {
+      // Create the product
+      const productResponse = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          category: data.category,
+          unit: data.unit,
+          minStockAlert: data.minStockAlert,
+          bomLink: data.bomLink,
+          description: data.description,
+          isFinished: false,
+        }),
+      })
+
+      if (!productResponse.ok) {
+        throw new Error("Failed to create product")
+      }
+
+      const newProduct = await productResponse.json()
+
+      // Add initial stock entry if provided
+      if (data.initialStock > 0) {
+        await fetch("/api/stock/entries", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productId: newProduct.id,
+            type: "IN",
+            quantity: data.initialStock,
+            reference: "INITIAL-STOCK",
+            notes: "Initial stock entry",
+          }),
+        })
+      }
+
+      toast({
+        title: "Product Added",
+        description: `${data.name} has been added to inventory with ${data.initialStock} units`,
+      })
+
+      // Refresh the data
+      window.location.reload()
+    } catch (error) {
+      console.error("Error adding product:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleExportReport = () => {

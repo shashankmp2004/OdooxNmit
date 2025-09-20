@@ -15,7 +15,7 @@ const createProductSchema = z.object({
 
 const updateProductSchema = createProductSchema.partial();
 
-export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
+export default requireRole(["ADMIN", "MANAGER", "INVENTORY"], async (req, res) => {
   const { method } = req;
 
   switch (method) {
