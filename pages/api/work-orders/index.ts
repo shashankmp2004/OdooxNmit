@@ -5,9 +5,14 @@ import { z } from "zod";
 const createWOSchema = z.object({
   moId: z.string(),
   title: z.string().min(1, "Title is required"),
+  taskName: z.string().optional(), // Added for frontend compatibility
   description: z.string().optional(),
   assignedToId: z.string().optional(),
-  workCenterId: z.string().optional()
+  workCenterId: z.string().optional(),
+  machineWorkCenter: z.string().optional(), // Added for frontend compatibility
+  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).default("MEDIUM"), // Added for frontend compatibility
+  estimatedTime: z.number().positive().optional(), // Added for frontend compatibility
+  notes: z.string().optional() // Added for frontend compatibility
 });
 
 export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) => {
@@ -150,7 +155,8 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
         const workOrder = await prisma.workOrder.create({
           data: {
             ...parsed.data,
-            status: "PENDING"
+            status: "PENDING",
+            progress: 0 // Initialize progress to 0
           },
           include: {
             mo: {

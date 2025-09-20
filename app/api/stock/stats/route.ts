@@ -10,26 +10,16 @@ export async function GET(request: NextRequest) {
 
     const [
       totalProducts,
-      lowStockItems,
       stockInToday,
       stockOutToday,
     ] = await Promise.all([
       // Total products count
       prisma.product.count(),
 
-      // Low stock items (assuming items with quantity < 10 are low stock)
-      prisma.product.count({
-        where: {
-          quantity: {
-            lt: 10,
-          },
-        },
-      }),
-
-      // Stock in today (sum of positive stock entries today)
+      // Stock in today (sum of IN type stock entries today)
       prisma.stockEntry.aggregate({
         where: {
-          quantity: { gt: 0 },
+          type: 'IN',
           createdAt: {
             gte: todayStart,
             lte: todayEnd,
@@ -40,10 +30,10 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Stock out today (sum of negative stock entries today)
+      // Stock out today (sum of OUT type stock entries today)
       prisma.stockEntry.aggregate({
         where: {
-          quantity: { lt: 0 },
+          type: 'OUT',
           createdAt: {
             gte: todayStart,
             lte: todayEnd,
@@ -55,11 +45,41 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
+    // Calculate low stock items by getting products with current stock below minStockAlert
+    const productsWithStock = await prisma.product.findMany({
+      where: {
+        minStockAlert: {
+          not: null,
+        },
+      },
+      include: {
+        stockEntries: true,
+      },
+    })
+
+    let lowStockItems = 0
+    for (const product of productsWithStock) {
+      // Calculate current stock (sum of IN entries minus sum of OUT entries)
+      const stockIn = product.stockEntries
+        .filter((entry: any) => entry.type === 'IN')
+        .reduce((sum: number, entry: any) => sum + entry.quantity, 0)
+      
+      const stockOut = product.stockEntries
+        .filter((entry: any) => entry.type === 'OUT')
+        .reduce((sum: number, entry: any) => sum + entry.quantity, 0)
+      
+      const currentStock = stockIn - stockOut
+      
+      if (product.minStockAlert && currentStock < product.minStockAlert) {
+        lowStockItems++
+      }
+    }
+
     return NextResponse.json({
       totalProducts: totalProducts || 0,
       lowStockItems: lowStockItems || 0,
       stockInToday: stockInToday._sum.quantity || 0,
-      stockOutToday: Math.abs(stockOutToday._sum.quantity || 0), // Make positive for display
+      stockOutToday: stockOutToday._sum.quantity || 0,
     })
   } catch (error) {
     console.error("Error fetching stock stats:", error)

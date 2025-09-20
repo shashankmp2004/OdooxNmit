@@ -87,6 +87,10 @@ model Product {
   sku          String?      @unique
   name         String
   description  String?
+  category     String?      // Added for frontend compatibility
+  unit         String?      // Added for frontend compatibility (e.g., "pcs", "kg", "lbs")
+  minStockAlert Int?        // Added for frontend compatibility - minimum stock alert level
+  bomLink      String?      // Added for frontend compatibility - BOM reference
   isFinished   Boolean      @default(false)
   bom          BOM?
   stockEntries StockEntry[]
@@ -112,6 +116,8 @@ model BOMComponent {
   material   Product  @relation("MaterialProduct", fields: [materialId], references: [id])
   materialId String
   qtyPerUnit Float
+  unit       String?  // Added for frontend compatibility - unit of measurement
+  cost       Float?   // Added for frontend compatibility - cost per unit
   createdAt  DateTime @default(now())
 }
 
@@ -132,19 +138,32 @@ model ManufacturingOrder {
   updatedAt    DateTime   @updatedAt
 }
 
+enum WorkPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model WorkOrder {
   id           String   @id @default(uuid())
   mo           ManufacturingOrder @relation(fields: [moId], references: [id])
   moId         String
   title        String
+  taskName     String?  // Added for frontend compatibility (alternative name field)
   description  String?
   assignedTo   User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
   assignedToId String?
   workCenterId String?
+  machineWorkCenter String? // Added for frontend compatibility - machine/work center name
   status       WorkStatus @default(PENDING)
+  priority     WorkPriority @default(MEDIUM) // Added for frontend compatibility
+  progress     Int       @default(0) // Added for frontend compatibility - completion percentage (0-100)
+  estimatedTime Float?   // Added for frontend compatibility - estimated time in hours
+  actualTime   Float?    // Added for frontend compatibility - actual time in hours
   startTime    DateTime?
   endTime      DateTime?
   durationMin  Int?
+  notes        String?   // Added for frontend compatibility - work order notes
   comments     Comment[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -170,11 +189,20 @@ model WorkCenter {
   updatedAt  DateTime @updatedAt
 }
 
+enum StockEntryType {
+  IN
+  OUT
+}
+
 model StockEntry {
   id           String @id @default(uuid())
   product      Product @relation(fields: [productId], references: [id])
   productId    String
-  change       Float    // negative for consumption, positive for addition
+  type         StockEntryType // Added for frontend compatibility (IN/OUT instead of positive/negative change)
+  quantity     Float    // Added for frontend compatibility - always positive quantity
+  change       Float    // Keep existing field for backward compatibility - negative for consumption, positive for addition
+  reference    String?  // Added for frontend compatibility - reference number/code
+  notes        String?  // Added for frontend compatibility - entry notes
   sourceType   String?  // e.g., "MO_COMPLETION", "MANUAL", "PURCHASE"
   sourceId     String?  // id of MO or WO or receipt
   balanceAfter Float?

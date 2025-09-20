@@ -1,11 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuth } from '../../../lib/auth';
 import { getCurrentStock, getLowStockAlerts } from '../../../lib/stock';
+import { prisma } from "@/lib/prisma";
 import { z } from 'zod';
 
 const stockQuerySchema = z.object({
   productId: z.string().optional(),
-  lowStockThreshold: z.string().optional().transform(val => val ? parseInt(val) : 10)
+  lowStockThreshold: z.string().optional().transform(val => val ? parseInt(val) : 10),
+  category: z.string().optional(),
+  search: z.string().optional()
 });
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,9 +22,40 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.json({ productId: query.productId, currentStock: stock });
       }
 
-      // Get low stock alerts
-      const lowStockItems = await getLowStockAlerts(query.lowStockThreshold);
-      return res.json({ lowStockItems, threshold: query.lowStockThreshold });
+      // Get all stock entries for frontend compatibility
+      const stockEntries = await prisma.stockEntry.findMany({
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              category: true,
+              unit: true
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 100 // Limit to recent entries
+      });
+
+      // Filter by search term if provided
+      let filteredEntries = stockEntries;
+      if (query.search) {
+        filteredEntries = stockEntries.filter((entry: any) => 
+          entry.product.name.toLowerCase().includes(query.search!.toLowerCase()) ||
+          (entry.reference && entry.reference.toLowerCase().includes(query.search!.toLowerCase()))
+        );
+      }
+
+      // Filter by category if provided
+      if (query.category && query.category !== "all") {
+        filteredEntries = filteredEntries.filter((entry: any) => 
+          entry.product.category === query.category
+        );
+      }
+
+      return res.json(filteredEntries);
 
     } catch (error) {
       console.error('Stock API error:', error);

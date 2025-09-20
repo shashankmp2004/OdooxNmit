@@ -6,6 +6,10 @@ const createProductSchema = z.object({
   name: z.string().min(1, "Name is required"),
   sku: z.string().optional(),
   description: z.string().optional(),
+  category: z.string().optional(), // Added for frontend compatibility
+  unit: z.string().optional(), // Added for frontend compatibility
+  minStockAlert: z.number().int().nonnegative().optional(), // Added for frontend compatibility
+  bomLink: z.string().optional(), // Added for frontend compatibility
   isFinished: z.boolean().default(false)
 });
 
