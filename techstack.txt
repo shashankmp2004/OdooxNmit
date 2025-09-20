@@ -1,0 +1,42 @@
+1. Frontend (UI Layer)
+
+You need a dashboard-first interface with sidebars, filters, forms, and analytics.
+
+Area	Tech	Why
+Framework	Next.js (React)	Hybrid SSR + API routes in same repo, perfect for hackathons, deployable for free on Vercel
+Styling	TailwindCSS + shadcn/ui	Prebuilt modern components (sidebar, tables, modals) + responsive styling
+State Mgmt	React Query (TanStack)	Data fetching with caching, optimistic updates, easy integration with APIs
+Charts/KPIs	Recharts (or Chart.js)	Easy to make production KPIs, order progress, utilization charts
+Realtime UI	Socket.io Client	Live updates for order/work order status
+PWA Support (Optional)	next-pwa	Offline support for operators in low network zones
+⚙️ 2. Backend (API + Logic)
+
+Handles authentication, CRUD for orders, BOM, stock, reporting, and realtime updates.
+
+Area	Tech	Why
+Runtime	Node.js	Lightweight, scalable, widely supported
+Framework	Express.js (or Next.js API Routes)	REST APIs quickly, no separate repo needed
+ORM	Prisma ORM	Easy DB queries, auto-migrations, schema-first
+Auth	NextAuth.js (or Clerk.dev free tier)	Role-based login, JWT session, password reset flow
+Validation	Zod	Input validation on every API request
+Realtime	Socket.io	Push updates for dashboards and work orders
+Scheduling (Alerts)	node-cron	Automated low-stock alerts and notifications
+🗄 3. Database (Persistent Storage)
+
+Relational data is required for Orders, BOM, Users, Stock.
+
+Choice	Reason
+PostgreSQL	Best for relational manufacturing data, supports JSON fields for BOM snapshots
+Free Hosting	Supabase or Neon.tech – free tier Postgres DB with web dashboard
+🔑 4. Authentication & Security
+Layer	Tech
+Auth	NextAuth.js with Credentials Provider or Clerk.dev
+Password Hashing	bcrypt
+Session Storage	JWT or database sessions (Prisma adapter)
+RBAC	Role column in User table, middleware to check permissions
+OTP	Free Email OTP via Resend, Brevo (Sendinblue), or SMTP
+📊 5. Reporting & Analytics
+Task	Tech
+Excel Export	ExcelJS or SheetJS
+PDF Export	jsPDF or pdfkit
+Analytics Dashboard	Recharts + React Query for live KPI graphs

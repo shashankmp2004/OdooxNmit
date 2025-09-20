@@ -1,0 +1,809 @@
+Complete backend plan, DB schema, RBAC & implementation (copy-paste ready)
+
+Perfect — below is a complete backend + DB schema + role-based access control (RBAC) implementation plan you can paste into a Next.js + Prisma project. I include:
+
+Full Prisma schema (Postgres-ready)
+
+Seed script (demo data for Admin/Manager/Operator/Inventory)
+
+Auth approach (NextAuth config + role in session)
+
+RBAC middleware for API routes
+
+Concrete API endpoint structure and code examples for: Products/BOM, Manufacturing Orders (MO), Work Orders (WO), Stock Ledger (atomic stock update transaction)
+
+Realtime hooks (Socket.io emit example)
+
+Which dashboard views / permissions each role should have
+
+Notes and testing checklist
+
+Everything below is self-contained. If you want, I can create files for you next (e.g., prisma/schema.prisma, prisma/seed.ts, pages/api/...) — but first paste these into your repo.
+
+1 — Roles & what they can do (summary)
+
+ADMIN
+
+Full access: manage users, roles, all data, settings, reports, exports.
+
+MANAGER
+
+Create/Edit/Delete Manufacturing Orders (MO), create & assign Work Orders (WO), view dashboards/KPIs, view stock (but not manual adjustments), create products/BOMs.
+
+OPERATOR
+
+See assigned Work Orders, start/pause/complete WOs, add comments/issues, view limited product/BOM info and MO progress; cannot change BOMs or manage stock.
+
+INVENTORY_MANAGER
+
+Manage stock ledger (manual adjustments, receipts), view inventory KPIs, receive alerts, create purchase receipts, but not create MOs.
+
+2 — Prisma schema (Postgres). Put this in prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERATOR
+  INVENTORY
+}
+
+enum OrderState {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum WorkStatus {
+  PENDING
+  STARTED
+  PAUSED
+  COMPLETED
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String?
+  email      String   @unique
+  role       UserRole @default(OPERATOR)
+  password   String?  // hashed when using credentials
+  avatarUrl  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  createdMO  ManufacturingOrder[] @relation("CreatedBy")
+  assignedWOs WorkOrder[]         @relation("AssignedTo")
+  comments   Comment[]
+}
+
+model Product {
+  id           String       @id @default(uuid())
+  sku          String?      @unique
+  name         String
+  description  String?
+  isFinished   Boolean      @default(false)
+  bom          BOM?
+  stockEntries StockEntry[]
+  createdAt    DateTime     @default(now())
+}
+
+model BOM {
+  id          String        @id @default(uuid())
+  product     Product       @relation(fields: [productId], references: [id])
+  productId   String        @unique
+  components  BOMComponent[]
+  createdAt   DateTime      @default(now())
+}
+
+model BOMComponent {
+  id         String   @id @default(uuid())
+  bom        BOM      @relation(fields: [bomId], references: [id])
+  bomId      String
+  material   Product  @relation(fields: [materialId], references: [id])
+  materialId String
+  qtyPerUnit Float
+}
+
+model ManufacturingOrder {
+  id           String   @id @default(uuid())
+  orderNo      String   @unique
+  name         String
+  product      Product  @relation(fields: [productId], references: [id])
+  productId    String
+  quantity     Int
+  state        OrderState @default(PLANNED)
+  deadline     DateTime?
+  bomSnapshot  Json?      // store BOM at order creation time (components array)
+  workOrders   WorkOrder[]
+  createdBy    User?      @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model WorkOrder {
+  id           String   @id @default(uuid())
+  mo           ManufacturingOrder @relation(fields: [moId], references: [id])
+  moId         String
+  title        String
+  description  String?
+  assignedTo   User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
+  workCenterId String?
+  status       WorkStatus @default(PENDING)
+  startTime    DateTime?
+  endTime      DateTime?
+  durationMin  Int?
+  comments     Comment[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Comment {
+  id         String @id @default(uuid())
+  workOrder  WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId String
+  author     User? @relation(fields: [authorId], references: [id])
+  authorId   String?
+  content    String
+  createdAt  DateTime @default(now())
+}
+
+model WorkCenter {
+  id         String @id @default(uuid())
+  name       String
+  description String?
+  costPerHour Float?
+  capacity   Int?
+  createdAt  DateTime @default(now())
+}
+
+model StockEntry {
+  id           String @id @default(uuid())
+  product      Product @relation(fields: [productId], references: [id])
+  productId    String
+  change       Float    // negative for consumption, positive for addition
+  sourceType   String?  // e.g., "MO_COMPLETION", "MANUAL", "PURCHASE"
+  sourceId     String?  // id of MO or WO or receipt
+  balanceAfter Float?
+  createdAt    DateTime @default(now())
+}
+
+
+After adding this run npx prisma migrate dev --name init then npx prisma generate.
+
+3 — Seed script (prisma/seed.ts) — demo roles + sample data
+
+Create prisma/seed.ts (use ts-node or compile) and run it after migration.
+
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  // users
+  const adminPass = await bcrypt.hash("Admin@123", 10);
+  const managerPass = await bcrypt.hash("Manager@123", 10);
+  const operatorPass = await bcrypt.hash("Operator@123", 10);
+  const inventoryPass = await bcrypt.hash("Inventory@123", 10);
+
+  const admin = await prisma.user.create({
+    data: { name: "Admin User", email: "admin@demo.com", role: "ADMIN", password: adminPass }
+  });
+  const manager = await prisma.user.create({
+    data: { name: "Manager", email: "manager@demo.com", role: "MANAGER", password: managerPass }
+  });
+  const operator = await prisma.user.create({
+    data: { name: "Operator", email: "operator@demo.com", role: "OPERATOR", password: operatorPass }
+  });
+  const inventory = await prisma.user.create({
+    data: { name: "Inventory", email: "inventory@demo.com", role: "INVENTORY", password: inventoryPass }
+  });
+
+  // products
+  const steel = await prisma.product.create({ data: { name: "Steel Plate", sku: "STEEL-01", isFinished: false }});
+  const screws = await prisma.product.create({ data: { name: "Screws Pack", sku: "SCR-01", isFinished: false }});
+  const table = await prisma.product.create({ data: { name: "Metal Table", sku: "TABLE-100", isFinished: true }});
+
+  // BOM for finished product
+  const bom = await prisma.bOM.create({
+    data: {
+      productId: table.id,
+      components: {
+        create: [
+          { materialId: steel.id, qtyPerUnit: 2 },
+          { materialId: screws.id, qtyPerUnit: 20 }
+        ]
+      }
+    }
+  });
+
+  // initial stock
+  await prisma.stockEntry.createMany({
+    data: [
+      { productId: steel.id, change: 100, sourceType: "INITIAL", balanceAfter: 100 },
+      { productId: screws.id, change: 1000, sourceType: "INITIAL", balanceAfter: 1000 }
+    ]
+  });
+
+  // sample MO
+  const mo = await prisma.manufacturingOrder.create({
+    data: {
+      orderNo: "MO-1001",
+      name: "Produce 5 Metal Tables",
+      productId: table.id,
+      quantity: 5,
+      state: "PLANNED",
+      createdById: manager.id,
+      bomSnapshot: [
+        { materialId: steel.id, qtyPerUnit: 2 },
+        { materialId: screws.id, qtyPerUnit: 20 }
+      ]
+    }
+  });
+
+  // sample work orders
+  await prisma.workOrder.createMany({
+    data: [
+      { moId: mo.id, title: "Cut & Weld", assignedToId: operator.id, status: "PENDING" },
+      { moId: mo.id, title: "Assembly", assignedToId: operator.id, status: "PENDING" }
+    ]
+  });
+
+  console.log("Seed complete.");
+}
+
+main()
+  .catch(e => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+
+
+Run: npx ts-node prisma/seed.ts or node dist/... depending on setup.
+
+4 — Authentication (NextAuth) — integrate roles into session
+
+Use NextAuth with Credentials provider (or Supabase/Clerk). Example NextAuth configuration (in pages/api/auth/[...nextauth].ts or app route):
+
+import NextAuth from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { prisma } from "../../../lib/prisma";
+import bcrypt from "bcryptjs";
+
+export default NextAuth({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: { email: { label: "Email", type: "text" }, password: { label: "Password", type: "password" } },
+      async authorize(credentials) {
+        const user = await prisma.user.findUnique({ where: { email: credentials?.email }});
+        if (!user || !user.password) return null;
+        const isValid = await bcrypt.compare(credentials!.password, user.password);
+        if (!isValid) return null;
+        return { id: user.id, name: user.name, email: user.email, role: user.role };
+      }
+    })
+  ],
+  callbacks: {
+    async session({ session, token }) {
+      // token contains role if set in jwt callback
+      if (token?.role) session.user.role = token.role;
+      session.user.id = token.sub;
+      return session;
+    },
+    async jwt({ token, user }) {
+      if (user) token.role = (user as any).role ?? token.role;
+      return token;
+    }
+  },
+  secret: process.env.NEXTAUTH_SECRET
+});
+
+
+session.user.role will be available on frontend. Protect pages server-side by checking session.
+
+5 — RBAC middleware for API routes
+
+Create helper lib/auth.ts:
+
+// lib/auth.ts
+import { getSession } from "next-auth/react";
+import { NextApiRequest, NextApiResponse } from "next";
+
+export function requireAuth(cb: (session, req: NextApiRequest, res: NextApiResponse) => Promise<any>) {
+  return async function handler(req: NextApiRequest, res: NextApiResponse) {
+    const session = await getSession({ req });
+    if (!session || !session.user) return res.status(401).json({ error: "Not authenticated" });
+    return cb(session, req, res);
+  };
+}
+
+export function requireRole(role: string | string[], cb: (session, req, res) => Promise<any>) {
+  return requireAuth(async (session, req, res) => {
+    const roles = Array.isArray(role) ? role : [role];
+    const userRole = session.user.role;
+    if (!roles.includes(userRole) && userRole !== "ADMIN") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    return cb(session, req, res);
+  });
+}
+
+
+Usage in API route:
+
+import { requireRole } from "@/lib/auth";
+export default requireRole(["MANAGER"], async (session, req, res) => {
+  // only MANAGER or ADMIN can reach here
+});
+
+6 — API endpoints (folder layout + sample implementations)
+
+Suggested API route structure (Next.js pages/api or app/api):
+
+/pages/api/
+  auth/...
+  products/index.ts
+  products/[id].ts
+  products/[id]/bom.ts
+  mos/index.ts
+  mos/[id].ts
+  mos/[id]/complete.ts
+  mos/[id]/workorders.ts
+  workorders/[id].ts
+  workorders/[id]/start.ts
+  workorders/[id]/complete.ts
+  stock/index.ts
+  stock/manual.ts
+  reports/kpis.ts
+
+
+I'll give you complete example implementations for key flows:
+
+6.1 Create Manufacturing Order (stores BOM snapshot)
+
+pages/api/mos/index.ts:
+
+import { NextApiRequest, NextApiResponse } from "next";
+import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth";
+import { z } from "zod";
+import { ioEmit } from "@/lib/socket"; // helper to emit socket events
+
+const schema = z.object({
+  name: z.string().min(2),
+  productId: z.string(),
+  quantity: z.number().int().positive(),
+  deadline: z.string().optional()
+});
+
+export default requireRole(["MANAGER"], async (session, req: NextApiRequest, res: NextApiResponse) => {
+  if (req.method === "POST") {
+    const parse = schema.safeParse(req.body);
+    if (!parse.success) return res.status(400).json({ error: parse.error });
+
+    const { name, productId, quantity, deadline } = parse.data;
+
+    // Fetch BOM for product
+    const bom = await prisma.bOM.findUnique({
+      where: { productId },
+      include: { components: true }
+    });
+
+    const snapshot = bom?.components.map(c => ({ materialId: c.materialId, qtyPerUnit: c.qtyPerUnit }));
+
+    const mo = await prisma.manufacturingOrder.create({
+      data: {
+        orderNo: `MO-${Date.now()}`, // simple generator
+        name,
+        productId,
+        quantity,
+        deadline: deadline ? new Date(deadline) : null,
+        bomSnapshot: snapshot ?? null,
+        createdById: session.user.id
+      }
+    });
+
+    // Emit realtime
+    ioEmit("mo:created", { moId: mo.id, mo });
+
+    return res.status(201).json(mo);
+  }
+
+  if (req.method === "GET") {
+    const { state, q } = req.query;
+    const where: any = {};
+    if (state) where.state = state;
+    if (q) where.OR = [{ name: { contains: String(q), mode: "insensitive" } }, { orderNo: { contains: String(q), mode: "insensitive" } }];
+    const list = await prisma.manufacturingOrder.findMany({ where, include: { product: true, workOrders: true }, orderBy: { createdAt: "desc" }});
+    return res.status(200).json(list);
+  }
+
+  res.setHeader("Allow", ["GET","POST"]);
+  res.status(405).end();
+});
+
+6.2 Create Work Order (assign to operator)
+
+pages/api/mos/[moId]/workorders.ts:
+
+import { NextApiRequest, NextApiResponse } from "next";
+import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth";
+import { z } from "zod";
+import { ioEmit } from "@/lib/socket";
+
+const schema = z.object({
+  title: z.string().min(2),
+  description: z.string().optional(),
+  assignedToId: z.string().optional(),
+  workCenterId: z.string().optional()
+});
+
+export default requireRole(["MANAGER"], async (session, req, res) => {
+  const { moId } = req.query;
+  if (req.method === "POST") {
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error });
+
+    const wo = await prisma.workOrder.create({
+      data: {
+        moId: String(moId),
+        title: parsed.data.title,
+        description: parsed.data.description,
+        assignedToId: parsed.data.assignedToId ?? null,
+        workCenterId: parsed.data.workCenterId ?? null,
+        status: "PENDING"
+      }
+    });
+
+    ioEmit("wo:created", { woId: wo.id, wo });
+    return res.status(201).json(wo);
+  }
+  res.setHeader("Allow", ["POST"]);
+  res.status(405).end();
+});
+
+6.3 Operator starts / completes WO
+
+pages/api/workorders/[id]/start.ts:
+
+import { NextApiRequest, NextApiResponse } from "next";
+import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth";
+import { ioEmit } from "@/lib/socket";
+
+export default requireRole(["OPERATOR"], async (session, req, res) => {
+  const { id } = req.query;
+  if (req.method !== "POST") return res.status(405).end();
+
+  // ensure operator is assigned to this WO (or admin/manager)
+  const wo = await prisma.workOrder.findUnique({ where: { id: String(id) }});
+  if (!wo) return res.status(404).json({ error: "WorkOrder not found" });
+
+  // if assignedToId exists, enforce that only assigned can start (unless admin/manager)
+  if (wo.assignedToId && wo.assignedToId !== session.user.id && session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+    return res.status(403).json({ error: "Not allowed" });
+  }
+
+  const updated = await prisma.workOrder.update({
+    where: { id: String(id) },
+    data: { status: "STARTED", startTime: new Date() }
+  });
+
+  ioEmit("wo:updated", { woId: id, status: "STARTED" });
+  return res.json(updated);
+});
+
+
+pages/api/workorders/[id]/complete.ts — this one also checks MO progress and optionally triggers stock consumption:
+
+import { NextApiRequest, NextApiResponse } from "next";
+import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth";
+import { ioEmit } from "@/lib/socket";
+
+export default requireRole(["OPERATOR"], async (session, req, res) => {
+  const { id } = req.query;
+  if (req.method !== "POST") return res.status(405).end();
+
+  const wo = await prisma.workOrder.findUnique({ where: { id: String(id) }, include: { mo: true }});
+  if (!wo) return res.status(404).json({ error: "Work order not found" });
+
+  // permission check
+  if (wo.assignedToId && wo.assignedToId !== session.user.id && session.user.role !== "ADMIN" && session.user.role !== "MANAGER") {
+    return res.status(403).json({ error: "Not allowed" });
+  }
+
+  const updated = await prisma.workOrder.update({
+    where: { id: String(id) },
+    data: { status: "COMPLETED", endTime: new Date(), durationMin: wo.startTime ? Math.round(((Date.now()) - new Date(wo.startTime).getTime()) / 60000) : null }
+  });
+
+  // Check if all WOs for MO are completed -> if so, mark MO DONE and consume stock (see function below)
+  const moId = wo.moId;
+  const total = await prisma.workOrder.count({ where: { moId }});
+  const completed = await prisma.workOrder.count({ where: { moId, status: "COMPLETED" }});
+  if (total === completed) {
+    // call atomic stock consumption
+    await consumeStockAndCompleteMO(moId);
+  }
+
+  ioEmit("wo:updated", { woId: id, status: "COMPLETED" });
+  return res.json(updated);
+});
+
+6.4 Atomic stock consumption & MO completion
+
+Place function in lib/stock.ts:
+
+import { prisma } from "./prisma";
+
+/**
+ * Consumes the BOM components for the manufacturing order (bomSnapshot) and
+ * adds finished good to stock. Uses a transaction to ensure atomicity.
+ *
+ * producedUnits: equals the MO.quantity (for simplicity)
+ */
+export async function consumeStockAndCompleteMO(moId: string) {
+  const mo = await prisma.manufacturingOrder.findUnique({ where: { id: moId }});
+  if (!mo) throw new Error("MO not found");
+  const producedUnits = mo.quantity;
+
+  const snapshot = mo.bomSnapshot as Array<{ materialId: string; qtyPerUnit: number }>;
+  if (!snapshot) {
+    // no BOM -> simply mark MO done
+    await prisma.manufacturingOrder.update({ where: { id: moId }, data: { state: "DONE" }});
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // For each component consume
+    for (const comp of snapshot) {
+      const lastEntry = await tx.stockEntry.findFirst({
+        where: { productId: comp.materialId },
+        orderBy: { createdAt: "desc" }
+      });
+      const lastBal = lastEntry?.balanceAfter ?? 0;
+      const consume = comp.qtyPerUnit * producedUnits;
+      await tx.stockEntry.create({
+        data: {
+          productId: comp.materialId,
+          change: -consume,
+          sourceType: "MO_COMPLETION",
+          sourceId: moId,
+          balanceAfter: lastBal - consume
+        }
+      });
+    }
+
+    // Add finished goods
+    const lastFinished = await tx.stockEntry.findFirst({
+      where: { productId: mo.productId },
+      orderBy: { createdAt: "desc" }
+    });
+    const lastFinBal = lastFinished?.balanceAfter ?? 0;
+    await tx.stockEntry.create({
+      data: {
+        productId: mo.productId,
+        change: producedUnits,
+        sourceType: "MO_COMPLETION",
+        sourceId: moId,
+        balanceAfter: lastFinBal + producedUnits
+      }
+    });
+
+    // Finally mark MO done
+    await tx.manufacturingOrder.update({ where: { id: moId }, data: { state: "DONE" }});
+  });
+}
+
+
+Important: You may want to support partial completions / producedUnits different than MO.quantity — adjust function accordingly.
+
+6.5 Stock manual adjustment (inventory manager)
+
+pages/api/stock/manual.ts:
+
+import { requireRole } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export default requireRole(["INVENTORY"], async (session, req, res) => {
+  if (req.method !== "POST") return res.status(405).end();
+  const { productId, change, note } = req.body;
+  if (!productId || typeof change !== "number") return res.status(400).json({ error: "Invalid" });
+
+  const last = await prisma.stockEntry.findFirst({ where: { productId }, orderBy: { createdAt: "desc" }});
+  const lastBal = last?.balanceAfter ?? 0;
+  const entry = await prisma.stockEntry.create({
+    data: {
+      productId,
+      change,
+      sourceType: "MANUAL",
+      sourceId: null,
+      balanceAfter: lastBal + change
+    }
+  });
+
+  return res.json(entry);
+});
+
+
+Inventory manager can also view full ledger (GET /api/stock) but only INVENTORY or ADMIN should do manual writes.
+
+7 — Socket.io helper (realtime)
+
+lib/socket.ts (simple pattern for serverless/Next.js — adapt if using external socket server):
+
+// lib/socket.ts
+import { Server as IoServer } from "socket.io";
+import { NextApiResponse } from "next";
+
+let io: IoServer | null = null;
+
+export function initSocket(server) {
+  if (io) return io;
+  io = new IoServer(server, { cors: { origin: "*" }});
+  io.on("connection", socket => {
+    console.log("socket connected", socket.id);
+  });
+  return io;
+}
+
+// simple emitter that will no-op if io not initialized (works for demo)
+export function ioEmit(event: string, payload: any) {
+  if (!io) {
+    // if using Vercel serverless it's tricky — better to use a separate socket server (Railway)
+    console.log("Socket not initialized; event:", event);
+    return;
+  }
+  io.emit(event, payload);
+}
+
+
+If you deploy on Vercel serverless, a separate socket server (Railway/Render) is recommended.
+
+8 — Dashboard permissions & UI access mapping
+
+Map screens to roles:
+
+Dashboard (global)
+
+ADMIN: full dashboard (all KPIs, filters, user management)
+
+MANAGER: KPI cards (orders completed, in-progress, delayed), list of MOs, ability to create/assign MOs & WOs
+
+INVENTORY: Inventory KPIs, stock alerts, ledger & manual adjustments
+
+OPERATOR: Compact operator dashboard — only assigned WOs, WO start/pause/complete buttons, quick profile
+
+Manufacturing Orders page
+
+ADMIN / MANAGER: Full CRUD, attach BOMs, set deadlines
+
+INVENTORY: View-only (to see incoming finished goods)
+
+OPERATOR: View only those MOs where they have assigned WOs (or show via assigned WOs page)
+
+Work Orders page
+
+MANAGER: Create/assign/transfer WOs, view timelines, comments
+
+OPERATOR: See assigned WOs and WO detail page with action buttons, add comments
+
+ADMIN: all access
+
+INVENTORY: view-only for coordination
+
+Stock Ledger
+
+INVENTORY & ADMIN: create manual adjustments, receipts
+
+MANAGER: view-only
+
+OPERATOR: no access (or view limited)
+
+Products & BOM
+
+MANAGER & ADMIN: create/update BOM, link to MOs
+
+INVENTORY: view BOMs (for receiving/consumption)
+
+OPERATOR: view minimal (parts needed for assigned WOs)
+
+9 — Example policy enforcement on server-side rendering (Next.js)
+
+When rendering pages server-side (getServerSideProps), check session and role:
+
+// pages/mos/index.tsx
+import { getSession } from "next-auth/react";
+
+export async function getServerSideProps(context) {
+  const session = await getSession(context);
+  if (!session) return { redirect: { destination: "/auth/signin", permanent: false }};
+
+  if (session.user.role === "OPERATOR") {
+    // maybe redirect operators to operator dashboard
+    return { redirect: { destination: "/operator/workorders", permanent: false } };
+  }
+
+  // fetch MOs for Manager/Admin
+  const res = await fetch(process.env.NEXT_PUBLIC_API_URL + "/api/mos", { headers: { cookie: context.req.headers.cookie }});
+  const mos = await res.json();
+  return { props: { session, mos } };
+}
+
+10 — Testing checklist (important for demo)
+
+ Migrations applied and seed run
+
+ NextAuth login works; session contains user.role
+
+ ADMIN user can create users and change roles
+
+ MANAGER can create a product + BOM and create MO
+
+ MANAGER can create WOs and assign to OPERATOR
+
+ OPERATOR can start/pause/complete assigned WO only
+
+ On final WO completion, MO marked DONE and stock entries updated (consumption & finished goods)
+
+ INVENTORY user can perform manual stock adjustments and see ledger
+
+ Socket events broadcast and client updates UI in real-time (or at least console logs show events)
+
+ Reports export works (Excel or PDF)
+
+11 — Security & best practices
+
+Passwords hashed with bcrypt (seed uses hashed).
+
+Always validate inputs with zod or yup in API routes.
+
+Use DB transactions (prisma.$transaction) for stock + MO state updates.
+
+Enforce RBAC both server-side (API) and UI-side (hide buttons).
+
+Keep API secrets in environment variables.
+
+Log audit trail (advanced): add an AuditLog table to store actorId, action, targetId, payload, timestamp.
+
+12 — Quick environment variables (add to .env)
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+NEXTAUTH_SECRET=some_long_secret
+NEXTAUTH_URL=http://localhost:3000
+
+
+If using a separate socket server: SOCKET_URL=....
+
+13 — Example minimal helper files
+
+lib/prisma.ts:
+
+import { PrismaClient } from "@prisma/client";
+const prisma = globalThis.prisma || new PrismaClient();
+if (process.env.NODE_ENV === "development") globalThis.prisma = prisma;
+export { prisma };
+
+
+lib/hash.ts:
+
+import bcrypt from "bcryptjs";
+export async function hashPwd(p: string) { return bcrypt.hash(p, 10); }
+export async function comparePwd(p: string, h: string) { return bcrypt.compare(p, h); }
