@@ -121,8 +121,8 @@ export function ReportsFilterBar({
   const right = (
     <>
       <Button
-        variant="outline"
-        className="h-10 bg-background border-input"
+        variant="default"
+        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400"
         onClick={() => {
           const a = document.createElement("a")
           a.href = "/api/reports/template"
@@ -135,8 +135,8 @@ export function ReportsFilterBar({
         <Download className="mr-2 h-4 w-4" /> Excel
       </Button>
       <Button
-        variant="outline"
-        className="h-10 bg-background border-input"
+        variant="default"
+        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400"
         onClick={() => {
           const a = document.createElement("a")
           a.href = "/api/reports/sample-pdf"

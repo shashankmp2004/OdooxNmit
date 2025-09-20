@@ -357,18 +357,18 @@ export default function ReportsPage() {
                     <div className="flex flex-col gap-2 lg:min-w-48">
                       <p className="text-sm font-medium text-foreground mb-2">Download Templates:</p>
                       <Button
-                        variant="outline"
+                        variant="default"
                         onClick={() => handleDownloadReport("excel")}
-                        className="bg-background border-input justify-start"
+                        className="justify-start bg-yellow-500 text-black hover:bg-yellow-400"
                         size="sm"
                       >
                         <FileText className="mr-2 h-4 w-4" />
                         Excel Template
                       </Button>
                       <Button
-                        variant="outline"
+                        variant="default"
                         onClick={() => handleDownloadReport("pdf")}
-                        className="bg-background border-input justify-start"
+                        className="justify-start bg-yellow-500 text-black hover:bg-yellow-400"
                         size="sm"
                       >
                         <FileText className="mr-2 h-4 w-4" />
