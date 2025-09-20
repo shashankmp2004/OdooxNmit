@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/pages/api/auth/[...nextauth]'
 
 export async function DELETE() {
   try {
-    const session = await getServerSession()
-    
-    if (!session || (session.user as any).role !== 'admin') {
+    const session = await getServerSession(authOptions)
+    if (!session || session.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

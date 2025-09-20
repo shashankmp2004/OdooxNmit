@@ -1,48 +1,41 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/pages/api/auth/[...nextauth]"
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
     // Get all work centers with their utilization data
-    // Since we don't have work centers table yet, I'll create mock data based on work orders
-    const workOrders = await prisma.workOrder.findMany({
-      where: {
-        status: { not: "CANCELLED" },
-      },
-      select: {
-        department: true,
-        status: true,
-      },
-    })
+    const centers = await prisma.workCenter.findMany({ select: { id: true, name: true } })
+    const woByCenter = await prisma.workOrder.groupBy({
+      by: ['workCenterId', 'status'],
+      _count: { _all: true },
+      where: { workCenterId: { not: null } },
+    } as any)
 
-    // Group by department and calculate utilization
-    const departmentStats = workOrders.reduce((acc: any, wo: any) => {
-      const dept = wo.department || "General"
-      if (!acc[dept]) {
-        acc[dept] = { total: 0, active: 0 }
-      }
-      acc[dept].total += 1
-      if (wo.status === "IN_PROGRESS" || wo.status === "STARTED") {
-        acc[dept].active += 1
-      }
-      return acc
-    }, {})
+    const map = new Map<string, { total: number; active: number }>()
+    for (const row of woByCenter as any[]) {
+      const key = row.workCenterId as string
+      const status = row.status as string
+      const count = row._count._all as number
+      const entry = map.get(key) || { total: 0, active: 0 }
+      entry.total += count
+      if (status === 'STARTED' || status === 'IN_PROGRESS') entry.active += count
+      map.set(key, entry)
+    }
 
-    // Convert to utilization percentage
-    const utilizationData = Object.entries(departmentStats).map(([dept, stats]: [string, any]) => {
+    const utilizationData = centers.map((c) => {
+      const stats = map.get(c.id) || { total: 0, active: 0 }
       const utilization = stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0
-      
-      // Assign colors based on utilization levels
-      let color = "#ef4444" // Red for low utilization
-      if (utilization >= 80) color = "#10b981" // Green for high utilization
-      else if (utilization >= 60) color = "#f59e0b" // Yellow for medium utilization
-      else if (utilization >= 40) color = "#3b82f6" // Blue for low-medium utilization
-
-      return {
-        name: dept,
-        value: utilization,
-        color,
-      }
+      let color = "#ef4444"
+      if (utilization >= 80) color = "#10b981"
+      else if (utilization >= 60) color = "#f59e0b"
+      else if (utilization >= 40) color = "#3b82f6"
+      return { name: c.name, value: utilization, color }
     })
 
     // If no data, return default mock data

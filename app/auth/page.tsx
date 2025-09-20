@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Factory, User, Shield, Wrench, Package, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { signIn, getSession } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { toast } from "sonner"
 
 const roles = [
@@ -54,8 +54,24 @@ export default function AuthPage() {
     email: "",
     password: "",
   })
+  const [remember, setRemember] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { status } = useSession()
+
+  useEffect(() => {
+    // Prefill from localStorage if available
+    try {
+      const savedRemember = localStorage.getItem("mf_remember")
+      const savedEmail = localStorage.getItem("mf_email")
+      if (savedRemember !== null) setRemember(savedRemember === "true")
+      if (savedEmail) setFormData((p) => ({ ...p, email: savedEmail }))
+      // Mirror remember flag to a cookie for middleware hints
+      document.cookie = `mf_remember=${savedRemember ?? 'true'}; path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
+    } catch {
+      // ignore storage errors
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,11 +82,22 @@ export default function AuthPage() {
         email: formData.email,
         password: formData.password,
         redirect: false,
+        remember, // hint for future server-side per-session policies
       })
 
       if (result?.error) {
         toast.error("Invalid credentials. Please try again.")
       } else {
+        // Save lightweight browser-side state for convenience
+        try {
+          localStorage.setItem("mf_remember", String(remember))
+          if (remember) {
+            localStorage.setItem("mf_email", formData.email)
+          } else {
+            localStorage.removeItem("mf_email")
+          }
+          document.cookie = `mf_remember=${String(remember)}; Max-Age=${60 * 60 * 24 * 30}; path=/; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`
+        } catch {}
         toast.success("Signed in successfully!")
         router.push("/dashboard")
       }
@@ -146,8 +173,29 @@ export default function AuthPage() {
                 />
               </div>
 
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <span>Remember this device</span>
+                </label>
+                {status === "authenticated" && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => router.push("/dashboard")}
+                  >
+                    Go to Dashboard
+                  </Button>
+                )}
+              </div>
+
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? "Signing in..." : status === "authenticated" ? "Continue" : "Sign In"}
               </Button>
             </form>
 

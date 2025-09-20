@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/pages/api/auth/[...nextauth]"
 
 export async function GET(request: NextRequest) {
   try {
-    const [products, workOrders] = await Promise.all([
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const [products, workCenters] = await Promise.all([
       // Get unique product names
       prisma.product.findMany({
         select: {
@@ -14,23 +20,13 @@ export async function GET(request: NextRequest) {
         take: 10, // Limit to prevent too many options
       }),
       
-      // Get unique departments/work centers from work orders
-      prisma.workOrder.findMany({
-        select: {
-          department: true,
-        },
-        distinct: ['department'],
-        where: {
-          department: { not: null },
-        },
+      // Get available work centers
+      prisma.workCenter.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+        take: 50,
       }),
     ])
-
-    // Process unique departments
-    const workCenters = workOrders
-      .map((wo: any) => wo.department)
-      .filter((dept: any) => dept !== null)
-      .map((dept: any) => ({ id: dept, name: dept }))
 
     return NextResponse.json({
       products: products.map((p: any) => ({
@@ -38,7 +34,7 @@ export async function GET(request: NextRequest) {
         name: p.name,
         sku: p.sku,
       })),
-      workCenters: workCenters,
+      workCenters,
     })
   } catch (error) {
     console.error("Error fetching filter options:", error)

@@ -23,11 +23,40 @@ This project aims to create a comprehensive manufacturing management system that
 - Automated reporting and analytics
 
 ## Technology Stack
-- Frontend: [To be determined]
-- Backend: [To be determined]
-- Database: [To be determined]
-- Other tools: [To be determined]
 
+## Security & Auth
+
+The app uses session-based authentication powered by NextAuth with JWT-backed secure cookies. Hardening includes:
+
+- Strict cookie settings (httpOnly, secure in prod, sameSite=lax) and short maxAge with rotation
+- Global middleware `middleware.ts` enforcing authentication and admin-only routes (`/admin`, `/api/admin`)
+- Basic CSRF protection for non-idempotent API routes by requiring same-origin
+- Security headers on all routes (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
+- Server-side guards (`lib/server-auth.ts`) for App Router pages and API handlers
+- Policy-aware access layer (`lib/policy-prisma.ts`) to avoid over-fetching and to enforce owner/role constraints
+
+Content Security Policy (CSP):
+
+- A global CSP is enforced via `middleware.ts` using the `Content-Security-Policy` header.
+- Defaults:
+	- `default-src 'self'`; `frame-ancestors 'none'`; `base-uri 'none'`; `object-src 'none'`
+	- `script-src 'self' https://vitals.vercel-insights.com` plus `'unsafe-inline'` in prod and `'unsafe-inline' 'unsafe-eval'` in dev for Next.js.
+	- `style-src 'self' 'unsafe-inline'` (Tailwind/CSS-in-JS needs inline styles).
+	- `img-src 'self' https: data: blob:`; `font-src 'self' data:`; `media-src 'self' blob:`; `connect-src 'self' https://vitals.vercel-insights.com ws: wss:`.
+- If you add third-party scripts or resources (maps, analytics, fonts), update the allowlists in `middleware.ts` accordingly.
+- For maximum strictness, wire up script nonces/hashes and remove `'unsafe-inline'` in production. Next.js supports nonces via `headers()`/`next/script` with `nonce` attributes; adopt that if you can budget the change.
+
+Environment variables required:
+
+See `.env.example` and set `NEXTAUTH_SECRET` and `DATABASE_URL`.
+
+### Session cookies
+
+- Sessions are cookie-based using NextAuth JWT cookies.
+- Cookie name: `next-auth.session-token` (dev) / `__Secure-next-auth.session-token` (prod).
+- Flags: `httpOnly`, `sameSite=lax`, `secure` in production.
+- Lifetime: 8h maxAge with 30m rolling update window.
+- Rotation: Tokens are rotated on sign-in and periodically to reduce theft impact.
 ## Installation
 ```bash
 # Installation instructions will be added as the project develops

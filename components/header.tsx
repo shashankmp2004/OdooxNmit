@@ -27,7 +27,7 @@ export function Header({ title, userName }: HeaderProps) {
   const router = useRouter()
 
   const displayName = userName || `${session?.user?.name} (${session?.user?.role})`
-  const isAdmin = session?.user?.role === 'admin'
+  const isAdmin = session?.user?.role === 'ADMIN'
 
   return (
     <header className="flex items-center justify-between p-4 bg-card border-b border-border">

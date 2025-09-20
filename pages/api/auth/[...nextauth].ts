@@ -42,24 +42,42 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
+  // Use signed JWT session cookies with tight lifetimes and rotation
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    // remember-me default (30 days) with periodic rotation
+    maxAge: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60, // rotate roughly hourly when active
+  },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
-        token.id = user.id;
+        token.role = (user as any).role;
+        token.id = (user as any).id;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
+        (session.user as any).id = (token as any).id;
+        (session.user as any).role = (token as any).role;
       }
       return session;
-    }
+    },
   },
   pages: {
     signIn: "/auth"

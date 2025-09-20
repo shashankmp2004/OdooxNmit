@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { startOfWeek, endOfWeek, subWeeks, format } from "date-fns"
+import { startOfWeek, endOfWeek, subWeeks } from "date-fns"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/pages/api/auth/[...nextauth]"
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     const weeks = parseInt(searchParams.get("weeks") || "6")
 
@@ -19,7 +25,7 @@ export async function GET(request: NextRequest) {
         // Completed orders in this week
         prisma.manufacturingOrder.count({
           where: {
-            status: "COMPLETED",
+            state: "DONE",
             updatedAt: {
               gte: weekStart,
               lte: weekEnd,
@@ -30,18 +36,14 @@ export async function GET(request: NextRequest) {
         prisma.manufacturingOrder.count({
           where: {
             OR: [
-              { status: "DELAYED" },
-              {
-                AND: [
-                  { status: { not: "COMPLETED" } },
-                  { dueDate: { lt: weekEnd } },
-                ],
-              },
+              { state: "IN_PROGRESS" },
+              { state: "PLANNED" },
             ],
             createdAt: {
               gte: weekStart,
               lte: weekEnd,
             },
+            deadline: { lt: weekEnd },
           },
         }),
       ])

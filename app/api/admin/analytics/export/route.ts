@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/pages/api/auth/[...nextauth]'
 
 export async function GET() {
   try {
-    const session = await getServerSession()
-    
-    if (!session || (session.user as any).role !== 'admin') {
+    const session = await getServerSession(authOptions)
+    if (!session || session.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -39,11 +39,11 @@ export async function GET() {
       },
       manufacturing: {
         activeOrders: await prisma.manufacturingOrder.count({
-          where: { status: 'IN_PROGRESS' }
+          where: { state: 'IN_PROGRESS' }
         }),
         completedThisMonth: await prisma.manufacturingOrder.count({
           where: {
-            status: 'DONE',
+            state: 'DONE',
             updatedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
           }
         }),

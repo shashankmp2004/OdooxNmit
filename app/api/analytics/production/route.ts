@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/pages/api/auth/[...nextauth]"
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     const months = parseInt(searchParams.get("months") || "6")
 
@@ -19,7 +25,7 @@ export async function GET(request: NextRequest) {
         // Completed manufacturing orders in this month
         prisma.manufacturingOrder.count({
           where: {
-            status: "COMPLETED",
+            state: "DONE",
             updatedAt: {
               gte: monthStart,
               lte: monthEnd,
