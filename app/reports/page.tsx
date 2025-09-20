@@ -7,12 +7,8 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar-fixed"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Download, Filter, TrendingUp, Clock, CheckCircle, AlertTriangle, Upload, FileText } from "lucide-react"
-import { format, subDays, subMonths } from "date-fns"
-import { cn } from "@/lib/utils"
+import { TrendingUp, Clock, CheckCircle, AlertTriangle, Upload, FileText } from "lucide-react"
+import { subMonths } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import { FileUpload } from "@/components/file-upload"
 import { ReportsFilterBar } from "@/components/reports-filter-bar"
@@ -142,20 +138,7 @@ export default function ReportsPage() {
     fetchAnalyticsData()
   }, [])
 
-  const handleDateRangeChange = (range: "7d" | "30d" | "90d" | "custom") => {
-    const now = new Date()
-    switch (range) {
-      case "7d":
-        setDateRange({ from: subDays(now, 7), to: now })
-        break
-      case "30d":
-        setDateRange({ from: subDays(now, 30), to: now })
-        break
-      case "90d":
-        setDateRange({ from: subDays(now, 90), to: now })
-        break
-    }
-  }
+  // Date range changes handled by ReportsFilterBar
 
   const handleDownloadReport = (format: "pdf" | "excel") => {
     toast({
