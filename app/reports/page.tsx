@@ -15,6 +15,8 @@ import { format, subDays, subMonths } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { FileUpload } from "@/components/file-upload"
+import { ReportsFilterBar } from "@/components/reports-filter-bar"
+import { DateRange } from "@/components/ui/date-range-picker"
 import {
   BarChart,
   Bar,
@@ -337,157 +339,16 @@ export default function ReportsPage() {
               {/* Filters */}
               <Card className="bg-card border-border overflow-hidden">
                 <CardContent className="p-4">
-                  <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                      {/* Date Range Quick Filters */}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDateRangeChange("7d")}
-                          className="bg-background border-input"
-                        >
-                          Last 7 days
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDateRangeChange("30d")}
-                          className="bg-background border-input"
-                        >
-                          Last 30 days
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDateRangeChange("90d")}
-                          className="bg-background border-input"
-                        >
-                          Last 90 days
-                        </Button>
-                      </div>
-
-                      {/* Custom Date Range */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-36 justify-start text-left font-normal bg-background border-input",
-                                !dateRange.from && "text-muted-foreground",
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateRange.from ? format(dateRange.from, "MMM dd, yyyy") : "Start date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-popover border border-border" align="start">
-                            <div className="p-3">
-                              <Calendar
-                                mode="single"
-                                selected={dateRange.from}
-                                onSelect={(date) => date && setDateRange({ ...dateRange, from: date })}
-                                initialFocus
-                              />
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-
-                        <span className="text-muted-foreground">to</span>
-
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-36 justify-start text-left font-normal bg-background border-input",
-                                !dateRange.to && "text-muted-foreground",
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateRange.to ? format(dateRange.to, "MMM dd, yyyy") : "End date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-popover border border-border" align="start">
-                            <div className="p-3">
-                              <Calendar
-                                mode="single"
-                                selected={dateRange.to}
-                                onSelect={(date) => date && setDateRange({ ...dateRange, to: date })}
-                                initialFocus
-                              />
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      {/* Product Filter */}
-                      <Select value={productFilter} onValueChange={setProductFilter}>
-                        <SelectTrigger className="w-48 bg-background border-input">
-                          <Filter className="mr-2 h-4 w-4" />
-                          <SelectValue placeholder="All Products" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Products</SelectItem>
-                          {filterOptions.products.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name} ({product.sku})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      {/* Work Center Filter */}
-                      <Select value={workCenterFilter} onValueChange={setWorkCenterFilter}>
-                        <SelectTrigger className="w-48 bg-background border-input">
-                          <SelectValue placeholder="All Work Centers" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Work Centers</SelectItem>
-                          {filterOptions.workCenters.map((workCenter) => (
-                            <SelectItem key={workCenter.id} value={workCenter.id}>
-                              {workCenter.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Download Buttons */}
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const link = document.createElement('a')
-                          link.href = "/api/reports/template"
-                          link.download = "manufacturing_reports_template.xlsx"
-                          document.body.appendChild(link)
-                          link.click()
-                          document.body.removeChild(link)
-                        }}
-                        className="bg-background border-input"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Excel
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const link = document.createElement('a')
-                          link.href = "/api/reports/sample-pdf"
-                          link.download = "manufacturing_reports_sample.pdf"
-                          document.body.appendChild(link)
-                          link.click()
-                          document.body.removeChild(link)
-                        }}
-                        className="bg-background border-input"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        PDF
-                      </Button>
-                    </div>
-                  </div>
+                  <ReportsFilterBar
+                    products={filterOptions.products}
+                    workCenters={filterOptions.workCenters}
+                    value={dateRange as DateRange}
+                    onChange={(r) => setDateRange({ from: r.from || dateRange.from, to: r.to || dateRange.to })}
+                    productValue={productFilter}
+                    onProductChange={setProductFilter}
+                    workCenterValue={workCenterFilter}
+                    onWorkCenterChange={setWorkCenterFilter}
+                  />
                 </CardContent>
               </Card>
 

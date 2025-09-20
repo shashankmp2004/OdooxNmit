@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { KPICard } from "@/components/kpi-card"
-import { DashboardFilters } from "@/components/dashboard-filters"
+import { DashboardFilterBar } from "@/components/dashboard-filter-bar"
 import { ManufacturingOrdersTable } from "@/components/manufacturing-orders-table"
 import { LiveActivityFeed } from "@/components/live-activity-feed"
 import { ProtectedRoute } from "@/components/protected-route"
@@ -199,8 +199,8 @@ export default function DashboardPage() {
                   )}
 
                   {/* Filters */}
-                  <DashboardFilters 
-                    onStatusChange={setStatusFilter} 
+                  <DashboardFilterBar
+                    onStatusChange={setStatusFilter}
                     onSearchChange={setSearchQuery}
                     onDateRangeChange={handleDateRangeChange}
                   />
