@@ -204,7 +204,8 @@ export async function middleware(req: NextRequest) {
                     .replace(/=/g, "")
                     .replace(/\+/g, "-")
                     .replace(/\//g, "_");
-                  if ((token as any).id === userId && digest === sig) {
+                  const tokenUserId = (token as any).id || (token as any).sub;
+                  if (tokenUserId === userId && digest === sig) {
                     ok = true;
                   }
                 }

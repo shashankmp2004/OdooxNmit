@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Settings, Shield } from "lucide-react"
+import { User, Settings, Shield, LayoutDashboard, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -64,10 +64,17 @@ export function Header({ title, userName }: HeaderProps) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard" className="flex items-center">
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/profile" className="flex items-center">
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </Link>
             </DropdownMenuItem>
             {isAdmin && (
               <>
@@ -82,7 +89,8 @@ export function Header({ title, userName }: HeaderProps) {
             )}
             <DropdownMenuSeparator />
             <SignoutDialog>
-              <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()}>
+              <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()} className="text-destructive">
+                <LogOut className="h-4 w-4 mr-2" />
                 Sign out
               </DropdownMenuItem>
             </SignoutDialog>

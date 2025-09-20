@@ -23,7 +23,7 @@ import {
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, Settings as Cog, Shield as ShieldIcon, LogOut } from "lucide-react";
+import { User, Settings as Cog, Shield as ShieldIcon, LogOut, LayoutDashboard } from "lucide-react";
 import { SignoutDialog } from "@/components/signout-dialog";
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
@@ -274,7 +274,10 @@ export default function LandingPage() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard">Dashboard</Link>
+                        <Link href="/dashboard" className="flex items-center">
+                          <LayoutDashboard className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Link>
                       </DropdownMenuItem>
                       {(session.user as any)?.role === "ADMIN" && (
                         <DropdownMenuItem asChild>
@@ -284,9 +287,11 @@ export default function LandingPage() {
                           </Link>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem>
-                        <Cog className="h-4 w-4 mr-2" />
-                        Settings
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center">
+                          <User className="h-4 w-4 mr-2" />
+                          Profile
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <SignoutDialog>
