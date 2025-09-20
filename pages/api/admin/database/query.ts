@@ -18,143 +18,54 @@ export default requireRole(["ADMIN"], async (req, res) => {
     const offsetNum = parseInt(offset as string);
     const searchTerm = search as string;
 
-    let data: any[] = [];
-    let totalCount = 0;
-    let columns: string[] = [];
+    // First, get column information for the table
+    const columnInfo: any[] = await prisma.$queryRaw`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns 
+      WHERE table_name = ${table}
+      AND table_schema = 'public'
+      ORDER BY ordinal_position;
+    `;
 
-    // Switch based on table name and fetch data accordingly
-    switch (table.toLowerCase()) {
-      case 'user':
-        const whereClause = searchTerm ? {
-          OR: [
-            { name: { contains: searchTerm, mode: 'insensitive' as const } },
-            { email: { contains: searchTerm, mode: 'insensitive' as const } },
-            { role: { contains: searchTerm, mode: 'insensitive' as const } }
-          ]
-        } : {};
-
-        data = await prisma.user.findMany({
-          where: whereClause,
-          skip: offsetNum,
-          take: limitNum,
-          orderBy: { createdAt: 'desc' }
-        });
-        totalCount = await prisma.user.count({ where: whereClause });
-        columns = ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt'];
-        break;
-
-      case 'product':
-        const productWhere = searchTerm ? {
-          OR: [
-            { name: { contains: searchTerm, mode: 'insensitive' as const } },
-            { description: { contains: searchTerm, mode: 'insensitive' as const } },
-            { category: { contains: searchTerm, mode: 'insensitive' as const } }
-          ]
-        } : {};
-
-        data = await prisma.product.findMany({
-          where: productWhere,
-          skip: offsetNum,
-          take: limitNum,
-          orderBy: { createdAt: 'desc' }
-        });
-        totalCount = await prisma.product.count({ where: productWhere });
-        columns = ['id', 'name', 'description', 'category', 'unit', 'price', 'minStockAlert', 'bomLink', 'createdAt', 'updatedAt'];
-        break;
-
-      case 'manufacturingorder':
-        const moWhere = searchTerm ? {
-          OR: [
-            { orderNo: { contains: searchTerm, mode: 'insensitive' as const } },
-            { name: { contains: searchTerm, mode: 'insensitive' as const } },
-            { state: { contains: searchTerm, mode: 'insensitive' as const } }
-          ]
-        } : {};
-
-        data = await prisma.manufacturingOrder.findMany({
-          where: moWhere,
-          include: {
-            product: { select: { name: true } },
-            createdBy: { select: { name: true } }
-          },
-          skip: offsetNum,
-          take: limitNum,
-          orderBy: { createdAt: 'desc' }
-        });
-        totalCount = await prisma.manufacturingOrder.count({ where: moWhere });
-        columns = ['id', 'orderNo', 'name', 'quantity', 'state', 'deadline', 'product', 'createdBy', 'createdAt', 'updatedAt'];
-        break;
-
-      case 'workorder':
-        const woWhere = searchTerm ? {
-          OR: [
-            { title: { contains: searchTerm, mode: 'insensitive' as const } },
-            { taskName: { contains: searchTerm, mode: 'insensitive' as const } },
-            { status: { contains: searchTerm, mode: 'insensitive' as const } },
-            { priority: { contains: searchTerm, mode: 'insensitive' as const } }
-          ]
-        } : {};
-
-        data = await prisma.workOrder.findMany({
-          where: woWhere,
-          include: {
-            mo: { select: { orderNo: true, name: true } },
-            assignedTo: { select: { name: true } }
-          },
-          skip: offsetNum,
-          take: limitNum,
-          orderBy: { createdAt: 'desc' }
-        });
-        totalCount = await prisma.workOrder.count({ where: woWhere });
-        columns = ['id', 'title', 'taskName', 'description', 'status', 'priority', 'progress', 'estimatedTime', 'actualTime', 'mo', 'assignedTo', 'createdAt', 'updatedAt'];
-        break;
-
-      case 'stockentry':
-        const stockWhere = searchTerm ? {
-          OR: [
-            { type: { contains: searchTerm, mode: 'insensitive' as const } },
-            { reference: { contains: searchTerm, mode: 'insensitive' as const } },
-            { notes: { contains: searchTerm, mode: 'insensitive' as const } }
-          ]
-        } : {};
-
-        data = await prisma.stockEntry.findMany({
-          where: stockWhere,
-          include: {
-            product: { select: { name: true } }
-          },
-          skip: offsetNum,
-          take: limitNum,
-          orderBy: { createdAt: 'desc' }
-        });
-        totalCount = await prisma.stockEntry.count({ where: stockWhere });
-        columns = ['id', 'type', 'quantity', 'reference', 'notes', 'product', 'createdAt'];
-        break;
-
-      case 'comment':
-        const commentWhere = searchTerm ? {
-          OR: [
-            { text: { contains: searchTerm, mode: 'insensitive' as const } }
-          ]
-        } : {};
-
-        data = await prisma.comment.findMany({
-          where: commentWhere,
-          include: {
-            user: { select: { name: true } },
-            workOrder: { select: { title: true } }
-          },
-          skip: offsetNum,
-          take: limitNum,
-          orderBy: { createdAt: 'desc' }
-        });
-        totalCount = await prisma.comment.count({ where: commentWhere });
-        columns = ['id', 'text', 'user', 'workOrder', 'createdAt'];
-        break;
-
-      default:
-        return res.status(400).json({ error: "Invalid table name" });
+    if (columnInfo.length === 0) {
+      return res.status(404).json({ error: "Table not found" });
     }
+
+    const columns = columnInfo.map(col => col.column_name);
+    
+    // Build dynamic search condition if search term is provided
+    let searchCondition = '';
+    if (searchTerm) {
+      const textColumns = columnInfo
+        .filter(col => 
+          col.data_type.includes('text') || 
+          col.data_type.includes('varchar') || 
+          col.data_type.includes('char')
+        )
+        .map(col => col.column_name);
+
+      if (textColumns.length > 0) {
+        const searchConditions = textColumns.map(col => 
+          `"${col}"::text ILIKE '%${searchTerm.replace(/'/g, "''")}%'`
+        ).join(' OR ');
+        searchCondition = `WHERE ${searchConditions}`;
+      }
+    }
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as count FROM "${table}" ${searchCondition}`;
+    const countResult: any[] = await prisma.$queryRawUnsafe(countQuery);
+    const totalCount = parseInt(countResult[0]?.count || '0');
+
+    // Get paginated data
+    const dataQuery = `
+      SELECT * FROM "${table}" 
+      ${searchCondition}
+      ORDER BY ${columns.includes('createdAt') ? '"createdAt"' : columns.includes('id') ? '"id"' : `"${columns[0]}"`} DESC
+      LIMIT ${limitNum} OFFSET ${offsetNum}
+    `;
+    
+    const data: any[] = await prisma.$queryRawUnsafe(dataQuery);
 
     return res.status(200).json({
       data,
@@ -163,7 +74,10 @@ export default requireRole(["ADMIN"], async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error querying database:", error);
-    return res.status(500).json({ error: "Failed to query database" });
+    console.error("Error fetching table data:", error);
+    return res.status(500).json({ 
+      error: "Failed to fetch table data",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });

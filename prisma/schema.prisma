@@ -174,6 +174,7 @@ model WorkOrder {
   description  String?
   assignedTo   User?     @relation("AssignedTo", fields: [assignedToId], references: [id])
   assignedToId String?
+  workCenter   WorkCenter? @relation(fields: [workCenterId], references: [id])
   workCenterId String?
   machineWorkCenter String? // Added for frontend compatibility - machine/work center name
   status       WorkStatus @default(PENDING)
@@ -200,14 +201,24 @@ model Comment {
   createdAt  DateTime @default(now())
 }
 
+enum WorkCenterStatus {
+  AVAILABLE
+  BUSY
+  MAINTENANCE
+  OFFLINE
+}
+
 model WorkCenter {
-  id         String @id @default(uuid())
-  name       String
+  id          String @id @default(uuid())
+  name        String
   description String?
-  costPerHour Float?
-  capacity   Int?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  status      WorkCenterStatus @default(AVAILABLE)
+  capacity    Int?    // units per hour
+  costPerHour Float?  // operating cost per hour
+  location    String? // physical location
+  workOrders  WorkOrder[] // relation to work orders
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum StockEntryType {

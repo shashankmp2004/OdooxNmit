@@ -22,14 +22,7 @@ interface QueryResult {
   recordCount: number
 }
 
-const tables = [
-  'User',
-  'Product', 
-  'ManufacturingOrder',
-  'WorkOrder',
-  'StockEntry',
-  'Comment'
-]
+// Dynamic table loading - no hardcoded list needed
 
 export default function DatabaseViewerPage() {
   const [selectedTable, setSelectedTable] = useState<string>('')
