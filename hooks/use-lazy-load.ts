@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 ﻿import { useEffect, useRef, useState } from 'react';
+=======
+import { useEffect, useRef, useState } from 'react';
+>>>>>>> 3f4e1b9c02096b9c94edcb2186c6d317cd263000
 
 interface UseLazyLoadOptions {
   threshold?: number;
