@@ -36,9 +36,9 @@ export function Header({ title, userName }: HeaderProps) {
         <h1 className="text-2xl font-semibold text-foreground text-balance">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 flex-wrap justify-end">
         {/* Search */}
-        <div className="relative w-64">
+        <div className="relative w-64 max-w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search..." className="pl-10 bg-background border-input" />
         </div>

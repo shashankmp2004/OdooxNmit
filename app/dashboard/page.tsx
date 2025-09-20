@@ -212,13 +212,15 @@ export default function DashboardPage() {
                         {userRole === "OPERATOR" ? "My Work Orders" : "Manufacturing Orders"}
                       </h2>
                     </div>
-                    <ManufacturingOrdersTable 
-                      statusFilter={statusFilter} 
-                      searchQuery={searchQuery}
-                      userRole={userRole}
-                      startDate={startDate}
-                      endDate={endDate}
-                    />
+                    <div className="overflow-x-auto">
+                      <ManufacturingOrdersTable 
+                        statusFilter={statusFilter} 
+                        searchQuery={searchQuery}
+                        userRole={userRole}
+                        startDate={startDate}
+                        endDate={endDate}
+                      />
+                    </div>
                   </div>
                 </div>
 

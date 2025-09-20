@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar } from "@/components/ui/calendar-fixed"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon, Download, Plus, Filter } from "lucide-react"
 import { format } from "date-fns"
@@ -128,19 +128,21 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
                   {startDate ? format(startDate, "MMM dd") : "Start date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date: Date | undefined) => {
-                    if (date) {
-                      setStartDate(date)
-                      onDateRangeChange?.(date, endDate)
-                    }
-                  }}
-                  disabled={(date: Date) => date > new Date() || (endDate && date > endDate)}
-                  initialFocus
-                />
+              <PopoverContent className="w-auto p-0 bg-popover border border-border" align="start">
+                <div className="p-3">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date: Date | undefined) => {
+                      if (date) {
+                        setStartDate(date)
+                        onDateRangeChange?.(date, endDate)
+                      }
+                    }}
+                    disabled={(date: Date) => date > new Date() || (endDate ? date > endDate : false)}
+                    initialFocus
+                  />
+                </div>
               </PopoverContent>
             </Popover>
 
@@ -157,19 +159,21 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
                   {endDate ? format(endDate, "MMM dd") : "End date"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={(date: Date | undefined) => {
-                    if (date) {
-                      setEndDate(date)
-                      onDateRangeChange?.(startDate, date)
-                    }
-                  }}
-                  disabled={(date: Date) => date > new Date() || (startDate && date < startDate)}
-                  initialFocus
-                />
+              <PopoverContent className="w-auto p-0 bg-popover border border-border" align="start">
+                <div className="p-3">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date: Date | undefined) => {
+                      if (date) {
+                        setEndDate(date)
+                        onDateRangeChange?.(startDate, date)
+                      }
+                    }}
+                    disabled={(date: Date) => date > new Date() || (startDate ? date < startDate : false)}
+                    initialFocus
+                  />
+                </div>
               </PopoverContent>
             </Popover>
           </div>

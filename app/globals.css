@@ -149,3 +149,25 @@
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Calendar specific styles */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-caption-font-size: 18px;
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--background));
+  --rdp-accent-color-dark: hsl(var(--primary));
+  --rdp-background-color-dark: hsl(var(--background));
+}
+
+.rdp-vhidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -141,8 +141,8 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <div className="rounded-md border overflow-x-auto">
+      <Table className="min-w-[900px] text-sm">
         <TableHeader>
           <TableRow>
             <TableHead>Order No</TableHead>
@@ -157,11 +157,11 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
         <TableBody>
           {filteredOrders.map((order) => (
             <TableRow key={order.id}>
-              <TableCell className="font-medium">{order.orderNo}</TableCell>
-              <TableCell>
-                <div>
-                  <div className="font-medium">{order.product.name}</div>
-                  <div className="text-sm text-muted-foreground">{order.name}</div>
+              <TableCell className="font-medium text-nowrap">{order.orderNo}</TableCell>
+              <TableCell className="max-w-[240px]">
+                <div className="min-w-0">
+                  <div className="font-medium truncate" title={order.product.name}>{order.product.name}</div>
+                  <div className="text-xs text-muted-foreground truncate" title={order.name}>{order.name}</div>
                 </div>
               </TableCell>
               <TableCell>{order.quantity}</TableCell>

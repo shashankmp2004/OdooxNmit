@@ -8,12 +8,13 @@ import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar } from "@/components/ui/calendar-fixed"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Download, Filter, TrendingUp, Clock, CheckCircle, AlertTriangle } from "lucide-react"
+import { CalendarIcon, Download, Filter, TrendingUp, Clock, CheckCircle, AlertTriangle, Upload, FileText } from "lucide-react"
 import { format, subDays, subMonths } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { FileUpload } from "@/components/file-upload"
 import {
   BarChart,
   Bar,
@@ -159,12 +160,56 @@ export default function ReportsPage() {
       title: "Report Download Started",
       description: `Generating ${format.toUpperCase()} report...`,
     })
+    
+    // Create download link and trigger download
+    const downloadUrl = format === "excel" 
+      ? "/api/reports/template" 
+      : "/api/reports/sample-pdf"
+    
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = format === "excel" 
+      ? "manufacturing_reports_template.xlsx"
+      : "manufacturing_reports_sample.pdf"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
     setTimeout(() => {
       toast({
         title: "Report Ready",
         description: `Your ${format.toUpperCase()} report has been downloaded.`,
       })
-    }, 2000)
+    }, 1000)
+  }
+
+  const handleFileUpload = async (file: File) => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await fetch('/api/reports/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed')
+      }
+      
+      toast({
+        title: "File Upload Successful",
+        description: `Processed ${result.recordCount} records from ${result.filename}`,
+      })
+      
+      // Optionally refresh analytics data here
+      
+    } catch (error) {
+      console.error('Upload error:', error)
+      throw error // Re-throw to let FileUpload component handle it
+    }
   }
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -290,7 +335,7 @@ export default function ReportsPage() {
               </div>
 
               {/* Filters */}
-              <Card className="bg-card border-border">
+              <Card className="bg-card border-border overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
                     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -323,50 +368,56 @@ export default function ReportsPage() {
                       </div>
 
                       {/* Custom Date Range */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-32 justify-start text-left font-normal bg-background border-input",
+                                "w-36 justify-start text-left font-normal bg-background border-input",
                                 !dateRange.from && "text-muted-foreground",
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateRange.from ? format(dateRange.from, "MMM dd") : "Start date"}
+                              {dateRange.from ? format(dateRange.from, "MMM dd, yyyy") : "Start date"}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={dateRange.from}
-                              onSelect={(date) => date && setDateRange({ ...dateRange, from: date })}
-                              initialFocus
-                            />
+                          <PopoverContent className="w-auto p-0 bg-popover border border-border" align="start">
+                            <div className="p-3">
+                              <Calendar
+                                mode="single"
+                                selected={dateRange.from}
+                                onSelect={(date) => date && setDateRange({ ...dateRange, from: date })}
+                                initialFocus
+                              />
+                            </div>
                           </PopoverContent>
                         </Popover>
+
+                        <span className="text-muted-foreground">to</span>
 
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-32 justify-start text-left font-normal bg-background border-input",
+                                "w-36 justify-start text-left font-normal bg-background border-input",
                                 !dateRange.to && "text-muted-foreground",
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateRange.to ? format(dateRange.to, "MMM dd") : "End date"}
+                              {dateRange.to ? format(dateRange.to, "MMM dd, yyyy") : "End date"}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={dateRange.to}
-                              onSelect={(date) => date && setDateRange({ ...dateRange, to: date })}
-                              initialFocus
-                            />
+                          <PopoverContent className="w-auto p-0 bg-popover border border-border" align="start">
+                            <div className="p-3">
+                              <Calendar
+                                mode="single"
+                                selected={dateRange.to}
+                                onSelect={(date) => date && setDateRange({ ...dateRange, to: date })}
+                                initialFocus
+                              />
+                            </div>
                           </PopoverContent>
                         </Popover>
                       </div>
@@ -404,10 +455,17 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Download Buttons */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         variant="outline"
-                        onClick={() => handleDownloadReport("excel")}
+                        onClick={() => {
+                          const link = document.createElement('a')
+                          link.href = "/api/reports/template"
+                          link.download = "manufacturing_reports_template.xlsx"
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                        }}
                         className="bg-background border-input"
                       >
                         <Download className="mr-2 h-4 w-4" />
@@ -415,11 +473,62 @@ export default function ReportsPage() {
                       </Button>
                       <Button
                         variant="outline"
-                        onClick={() => handleDownloadReport("pdf")}
+                        onClick={() => {
+                          const link = document.createElement('a')
+                          link.href = "/api/reports/sample-pdf"
+                          link.download = "manufacturing_reports_sample.pdf"
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                        }}
                         className="bg-background border-input"
                       >
                         <Download className="mr-2 h-4 w-4" />
                         PDF
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* File Import Section */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    Import Data from Files
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col lg:flex-row gap-4 items-start">
+                    <div className="flex-1">
+                      <FileUpload
+                        onFileUpload={handleFileUpload}
+                        title="Import Manufacturing Data"
+                        description="Upload Excel (.xlsx, .xls) or PDF files to import manufacturing data"
+                        className="max-w-2xl"
+                      />
+                    </div>
+                    
+                    <div className="flex flex-col gap-2 lg:min-w-48">
+                      <p className="text-sm font-medium text-foreground mb-2">Download Templates:</p>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDownloadReport("excel")}
+                        className="bg-background border-input justify-start"
+                        size="sm"
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Excel Template
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDownloadReport("pdf")}
+                        className="bg-background border-input justify-start"
+                        size="sm"
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Sample PDF
                       </Button>
                     </div>
                   </div>

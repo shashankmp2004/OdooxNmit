@@ -60,17 +60,17 @@ export async function createStockEntry(operation: StockOperation, tx?: any): Pro
   // Check for low stock alert after creating entry
   const product = await prismaClient.product.findUnique({
     where: { id: operation.productId },
-    select: { minStockLevel: true, name: true, sku: true }
+    select: { minStockAlert: true, name: true, sku: true }
   });
 
-  if (product && product.minStockLevel && newBalance <= product.minStockLevel) {
+  if (product && product.minStockAlert && newBalance <= product.minStockAlert) {
     // Emit low stock alert if not in a transaction (to avoid double alerts)
     if (!tx) {
       socketService.emitLowStockAlert(operation.productId, {
         productName: product.name,
         sku: product.sku,
         currentStock: newBalance,
-        minStockLevel: product.minStockLevel,
+        minStockLevel: product.minStockAlert,
         operation: operation
       });
     }

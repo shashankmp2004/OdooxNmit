@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Trash2, Edit, Plus, Search, Package, AlertTriangle } from 'lucide-react'
+import { Trash2, Edit, Plus, Search, Package, AlertTriangle, Download, FileUp } from 'lucide-react'
+import { FileUpload } from '@/components/file-upload'
 import { toast } from '@/hooks/use-toast'
 
 interface Product {
@@ -47,6 +48,8 @@ export default function ProductsPage() {
     minStockAlert: '',
     bomLink: ''
   })
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [exportLoading, setExportLoading] = useState<"excel"|"pdf"|null>(null)
 
   useEffect(() => {
     fetchProducts()
@@ -75,6 +78,41 @@ export default function ProductsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleExport = async (format: 'excel'|'pdf') => {
+    try {
+      setExportLoading(format)
+      const params = new URLSearchParams()
+      if (searchTerm) params.set('search', searchTerm)
+      if (selectedCategory !== 'all') params.set('category', selectedCategory)
+      const res = await fetch(`/api/products/export?format=${format}&`+params.toString())
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `products-${new Date().toISOString().slice(0,10)}.${format==='excel'?'xlsx':'pdf'}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e:any) {
+      toast({ title: 'Export error', description: e.message || 'Failed to export', variant: 'destructive' })
+    } finally {
+      setExportLoading(null)
+    }
+  }
+
+  const handleImportFile = async (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/products/import', { method: 'POST', body: form })
+    if (!res.ok) throw new Error('Import failed')
+    const data = await res.json()
+    toast({ title: 'Import completed', description: `Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skipped}` })
+    setIsImportDialogOpen(false)
+    fetchProducts()
   }
 
   const handleCreateProduct = async () => {
@@ -258,7 +296,36 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold">Products Management</h1>
           <p className="text-gray-600">Manage product catalog and inventory settings</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => handleExport('excel')} disabled={!!exportLoading}>
+            <Download className="w-4 h-4 mr-2" /> Export Excel
+          </Button>
+          <Button variant="outline" onClick={() => handleExport('pdf')} disabled={!!exportLoading}>
+            <Download className="w-4 h-4 mr-2" /> Export PDF
+          </Button>
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <FileUp className="w-4 h-4 mr-2" /> Import
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Import Products</DialogTitle>
+                <DialogDescription>
+                  Upload an Excel (.xlsx) file using the provided template format.
+                </DialogDescription>
+              </DialogHeader>
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Download template if needed:</p>
+                <Button variant="link" asChild>
+                  <a href="/api/products/template">Download Template</a>
+                </Button>
+                <FileUpload onFileUpload={handleImportFile} acceptedFileTypes={[".xlsx",".xls"]} />
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -363,7 +430,8 @@ export default function ProductsPage() {
               <Button onClick={handleCreateProduct}>Create Product</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}

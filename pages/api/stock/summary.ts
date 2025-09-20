@@ -25,7 +25,7 @@ export default requireRole(["ADMIN", "MANAGER", "INVENTORY"], async (req, res) =
       orderBy: { createdAt: "asc" }
     });
 
-    // Group entries by product and calculate summary
+  // Group entries by product and calculate summary
     const productStockMap = new Map();
 
     stockEntries.forEach((entry: any) => {
@@ -46,12 +46,12 @@ export default requireRole(["ADMIN", "MANAGER", "INVENTORY"], async (req, res) =
 
       const productStock = productStockMap.get(productId);
       
-      // Update stock calculations
-      productStock.currentStock += entry.change;
-      
+      // Use balanceAfter for current stock; add totals by type for reporting
+      productStock.currentStock = entry.balanceAfter ?? productStock.currentStock + entry.change;
+
       if (entry.type === "IN") {
         productStock.totalIn += entry.quantity;
-      } else {
+      } else if (entry.type === "OUT") {
         productStock.totalOut += entry.quantity;
       }
       

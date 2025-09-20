@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "pnpm install pdfkit",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"add",
+				"pdfkit"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		}
+	]
+}
