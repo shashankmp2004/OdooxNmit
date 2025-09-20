@@ -1,271 +1,243 @@
-import { useEffect, useState, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+'use client';
+
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 
-interface UseSocketOptions {
+export interface SocketOptions {
+  url?: string;
   autoConnect?: boolean;
+  reconnectAttempts?: number;
+  reconnectDelay?: number;
 }
 
-interface SocketState {
+export interface UseSocketReturn {
+  socket: WebSocket | null;
   connected: boolean;
   connecting: boolean;
   error: string | null;
+  send: (data: any) => void;
+  disconnect: () => void;
+  connect: () => void;
 }
 
-export function useSocket(options: UseSocketOptions = { autoConnect: true }) {
+export function useSocket(options: SocketOptions = {}): UseSocketReturn {
   const { data: session } = useSession();
-  const [socketState, setSocketState] = useState<SocketState>({
-    connected: false,
-    connecting: false,
-    error: null
-  });
+  const {
+    url = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001',
+    autoConnect = true,
+    reconnectAttempts = 5,
+    reconnectDelay = 3000,
+  } = options;
+
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  const socketRef = useRef<Socket | null>(null);
-  const mountedRef = useRef(true);
+  const reconnectCount = useRef(0);
+  const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const connect = useCallback(() => {
+    if (connecting || connected) return;
 
-  useEffect(() => {
+    setConnecting(true);
+    setError(null);
+
+    try {
+      const ws = new WebSocket(url);
+      
+      ws.onopen = () => {
+        setSocket(ws);
+        setConnected(true);
+        setConnecting(false);
+        setError(null);
+        reconnectCount.current = 0;
+        
+        // Send authentication if session exists
+        if (session?.user) {
+          ws.send(JSON.stringify({
+            type: 'auth',
+            data: { userId: session.user.id, token: session.user.email }
+          }));
+        }
+      };
+
+      ws.onclose = () => {
+        setSocket(null);
+        setConnected(false);
+        setConnecting(false);
+        
+        // Attempt reconnection
+        if (reconnectCount.current < reconnectAttempts) {
+          reconnectCount.current++;
+          reconnectTimer.current = setTimeout(() => {
+            connect();
+          }, reconnectDelay);
+        }
+      };
+
+      ws.onerror = (event) => {
+        setError('WebSocket connection error');
+        setConnecting(false);
+      };
+
+    } catch (err) {
+      setError('Failed to create WebSocket connection');
+      setConnecting(false);
+    }
+  }, [url, connecting, connected, session, reconnectAttempts, reconnectDelay]);
+
+  const disconnect = useCallback(() => {
+    if (reconnectTimer.current) {
+      clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+    }
     
-    if (!session?.user || !options.autoConnect) return;
+    if (socket) {
+      socket.close();
+    }
+    
+    setSocket(null);
+    setConnected(false);
+    setConnecting(false);
+    reconnectCount.current = 0;
+  }, [socket]);
 
-    const connectSocket = () => {
-      if (socketRef.current?.connected) return;
+  const send = useCallback((data: any) => {
+    if (socket && connected) {
+      socket.send(JSON.stringify(data));
+    }
+  }, [socket, connected]);
 
-      setSocketState(prev => ({ ...prev, connecting: true, error: null }));
-
-      const socket = io({
-        path: '/api/socketio',
-        transports: ['websocket', 'polling']
-      });
-
-      socket.on('connect', () => {
-        if (!mountedRef.current) return;
-        console.log('🔗 Socket connected');
-        setSocketState({
-          connected: true,
-          connecting: false,
-          error: null
-        });
-      });
-
-      socket.on('disconnect', (reason) => {
-        if (!mountedRef.current) return;
-        console.log('❌ Socket disconnected:', reason);
-        setSocketState(prev => ({
-          ...prev,
-          connected: false,
-          connecting: false
-        }));
-      });
-
-      socket.on('connect_error', (error) => {
-        if (!mountedRef.current) return;
-        console.error('🚫 Socket connection error:', error);
-        setSocketState(prev => ({
-          ...prev,
-          connected: false,
-          connecting: false,
-          error: error.message
-        }));
-      });
-
-      socketRef.current = socket;
-    };
-
-    connectSocket();
+  useEffect(() => {
+    if (autoConnect && session) {
+      connect();
+    }
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
+      disconnect();
     };
-  }, [session?.user, options.autoConnect]);
-
-  const emit = (event: string, data?: any) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data);
-    }
-  };
-
-  const on = (event: string, handler: (data: any) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on(event, handler);
-    }
-  };
-
-  const off = (event: string, handler?: (data: any) => void) => {
-    if (socketRef.current) {
-      if (handler) {
-        socketRef.current.off(event, handler);
-      } else {
-        socketRef.current.off(event);
-      }
-    }
-  };
-
-  const subscribe = {
-    workOrder: (workOrderId: string) => emit('subscribe:workorder', workOrderId),
-    mo: (moId: string) => emit('subscribe:mo', moId),
-    stock: () => emit('subscribe:stock'),
-  };
-
-  const unsubscribe = {
-    workOrder: (workOrderId: string) => emit('unsubscribe:workorder', workOrderId),
-    mo: (moId: string) => emit('unsubscribe:mo', moId),
-  };
+  }, [autoConnect, session, connect, disconnect]);
 
   return {
-    socket: socketRef.current,
-    ...socketState,
-    emit,
-    on,
-    off,
-    subscribe,
-    unsubscribe
+    socket,
+    connected,
+    connecting,
+    error,
+    send,
+    disconnect,
+    connect,
   };
 }
 
-// Specific hooks for different features
-export function useWorkOrderUpdates(workOrderId?: string) {
-  const { on, off, subscribe, unsubscribe } = useSocket();
-  const [updates, setUpdates] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!workOrderId) return;
-
-    subscribe.workOrder(workOrderId);
-
-    const handleUpdate = (data: any) => {
-      setUpdates(prev => [data, ...prev].slice(0, 50)); // Keep last 50 updates
-    };
-
-    const handleStarted = (data: any) => {
-      setUpdates(prev => [{ ...data, type: 'started' }, ...prev].slice(0, 50));
-    };
-
-    const handleCompleted = (data: any) => {
-      setUpdates(prev => [{ ...data, type: 'completed' }, ...prev].slice(0, 50));
-    };
-
-    on('workorder:updated', handleUpdate);
-    on('workorder:started', handleStarted);
-    on('workorder:completed', handleCompleted);
-
-    return () => {
-      off('workorder:updated', handleUpdate);
-      off('workorder:started', handleStarted);
-      off('workorder:completed', handleCompleted);
-      unsubscribe.workOrder(workOrderId);
-    };
-  }, [workOrderId, on, off, subscribe, unsubscribe]);
-
-  return updates;
-}
-
-export function useStockAlerts() {
-  const { on, off, subscribe } = useSocket();
-  const [alerts, setAlerts] = useState<any[]>([]);
-
-  useEffect(() => {
-    subscribe.stock();
-
-    const handleStockUpdate = (data: any) => {
-      setAlerts(prev => [data, ...prev].slice(0, 20));
-    };
-
-    const handleLowStockAlert = (data: any) => {
-      setAlerts(prev => [{ ...data, type: 'low_stock' }, ...prev].slice(0, 20));
-    };
-
-    on('stock:updated', handleStockUpdate);
-    on('stock:low_stock_alert', handleLowStockAlert);
-
-    return () => {
-      off('stock:updated', handleStockUpdate);
-      off('stock:low_stock_alert', handleLowStockAlert);
-    };
-  }, [on, off, subscribe]);
-
-  return alerts;
-}
-
+// Dashboard-specific hook
 export function useDashboardUpdates() {
-  const { on, off } = useSocket();
-  const [updates, setUpdates] = useState<any[]>([]);
+  const { socket, connected, send } = useSocket({
+    autoConnect: true,
+  });
+
+  const [metrics, setMetrics] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
-    const handleUpdate = (data: any) => {
-      setUpdates(prev => [data, ...prev].slice(0, 100));
+    if (!socket) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        switch (message.type) {
+          case 'dashboard_metrics':
+            setMetrics(message.data);
+            break;
+          case 'orders_update':
+            setOrders(message.data);
+            break;
+        }
+      } catch (error) {
+        console.error('Error parsing socket message:', error);
+      }
     };
 
-    const handleWorkOrderUpdate = (data: any) => {
-      setUpdates(prev => [{ ...data, type: 'workorder' }, ...prev].slice(0, 100));
-    };
-
-    const handleMOUpdate = (data: any) => {
-      setUpdates(prev => [{ ...data, type: 'mo' }, ...prev].slice(0, 100));
-    };
-
-    const handleStockUpdate = (data: any) => {
-      setUpdates(prev => [{ ...data, type: 'stock' }, ...prev].slice(0, 100));
-    };
-
-    on('dashboard:update', handleUpdate);
-    on('workorder:status_change', handleWorkOrderUpdate);
-    on('mo:status_change', handleMOUpdate);
-    on('stock:updated', handleStockUpdate);
+    socket.addEventListener('message', handleMessage);
+    
+    // Request initial data
+    if (connected) {
+      send({ type: 'subscribe', channel: 'dashboard' });
+    }
 
     return () => {
-      off('dashboard:update', handleUpdate);
-      off('workorder:status_change', handleWorkOrderUpdate);
-      off('mo:status_change', handleMOUpdate);
-      off('stock:updated', handleStockUpdate);
+      socket.removeEventListener('message', handleMessage);
     };
-  }, [on, off]);
+  }, [socket, connected, send]);
 
-  return updates;
+  return { metrics, orders, connected };
 }
 
+// Notifications hook
 export function useNotifications() {
-  const { on, off } = useSocket();
+  const { socket, connected, send } = useSocket();
   const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
-    const handleNotification = (data: any) => {
-      setNotifications(prev => [data, ...prev].slice(0, 10));
+    if (!socket) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        if (message.type === 'notification') {
+          setNotifications(prev => [message.data, ...prev].slice(0, 50));
+        }
+      } catch (error) {
+        console.error('Error parsing notification:', error);
+      }
     };
 
-    on('notification', handleNotification);
+    socket.addEventListener('message', handleMessage);
+    
+    if (connected) {
+      send({ type: 'subscribe', channel: 'notifications' });
+    }
 
     return () => {
-      off('notification', handleNotification);
+      socket.removeEventListener('message', handleMessage);
     };
-  }, [on, off]);
+  }, [socket, connected, send]);
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, read: true } 
-          : notif
-      )
-    );
-  };
+  return { notifications, connected };
+}
 
-  const clearAll = () => {
-    setNotifications([]);
-  };
+// Stock alerts hook
+export function useStockAlerts() {
+  const { socket, connected, send } = useSocket();
+  const [alerts, setAlerts] = useState<any[]>([]);
 
-  return {
-    notifications,
-    markAsRead,
-    clearAll,
-    unreadCount: notifications.filter(n => !n.read).length
-  };
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        if (message.type === 'stock_alert') {
+          setAlerts(prev => [message.data, ...prev].slice(0, 20));
+        }
+      } catch (error) {
+        console.error('Error parsing stock alert:', error);
+      }
+    };
+
+    socket.addEventListener('message', handleMessage);
+    
+    if (connected) {
+      send({ type: 'subscribe', channel: 'stock_alerts' });
+    }
+
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, [socket, connected, send]);
+
+  return { alerts, connected };
 }
