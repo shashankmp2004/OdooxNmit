@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -47,7 +47,7 @@ const roles = [
     color: "bg-chart-3/20 text-chart-3 border-chart-3/30",
     email: "inventory@demo.com"
   },
-]
+];
 
 export default function AuthPage() {
   const [formData, setFormData] = useState({
@@ -103,7 +103,9 @@ export default function AuthPage() {
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center space-x-2">
             <Factory className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">ManufactureOS</span>
+            <span className="text-2xl font-bold text-foreground">
+              ManufactureOS
+            </span>
           </div>
           <p className="text-muted-foreground">Sign in to your account</p>
         </div>
@@ -185,11 +187,14 @@ export default function AuthPage() {
 
         {/* Back to Landing */}
         <div className="text-center">
-          <Link href="/landing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            href="/landing"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
             ← Back to home
           </Link>
         </div>
       </div>
     </div>
-  )
+  );
 }
