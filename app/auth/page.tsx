@@ -1,17 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Factory, User, Shield, Wrench, Package } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Factory, User, Shield, Wrench, Package } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth-provider";
 
 const roles = [
   {
@@ -42,43 +49,54 @@ const roles = [
     icon: Package,
     color: "bg-chart-3/20 text-chart-3 border-chart-3/30",
   },
-]
+];
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [selectedRole, setSelectedRole] = useState<string>("")
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode");
+  const [isLogin, setIsLogin] = useState(mode !== "signup");
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
-  })
-  const router = useRouter()
-  const { login } = useAuth()
+  });
+  const router = useRouter();
+  const { login } = useAuth();
+
+  // Update isLogin state when URL changes
+  useEffect(() => {
+    if (mode === "signup") {
+      setIsLogin(false);
+    } else {
+      setIsLogin(true);
+    }
+  }, [mode]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!isLogin && !selectedRole) {
-      alert("Please select a role to continue")
-      return
+      alert("Please select a role to continue");
+      return;
     }
 
     const userData = {
       email: formData.email,
       name: formData.name || formData.email.split("@")[0],
       role: isLogin ? "Manager" : selectedRole,
-    }
+    };
 
-    login(userData)
-    router.push("/dashboard")
-  }
+    login(userData);
+    router.push("/dashboard");
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -87,9 +105,13 @@ export default function AuthPage() {
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center space-x-2">
             <Factory className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">ManufactureOS</span>
+            <span className="text-2xl font-bold text-foreground">
+              ManufactureOS
+            </span>
           </div>
-          <p className="text-muted-foreground">{isLogin ? "Sign in to your account" : "Create your account"}</p>
+          <p className="text-muted-foreground">
+            {isLogin ? "Sign in to your account" : "Create your account"}
+          </p>
         </div>
 
         {/* Auth Form */}
@@ -97,7 +119,9 @@ export default function AuthPage() {
           <CardHeader>
             <CardTitle>{isLogin ? "Sign In" : "Sign Up"}</CardTitle>
             <CardDescription>
-              {isLogin ? "Enter your credentials to access your dashboard" : "Choose your role and create your account"}
+              {isLogin
+                ? "Enter your credentials to access your dashboard"
+                : "Choose your role and create your account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -149,12 +173,14 @@ export default function AuthPage() {
                   <Label>Select Your Role</Label>
                   <div className="grid grid-cols-1 gap-3">
                     {roles.map((role) => {
-                      const Icon = role.icon
+                      const Icon = role.icon;
                       return (
                         <div
                           key={role.id}
                           className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:bg-accent/50 ${
-                            selectedRole === role.id ? "border-primary bg-primary/5" : "border-border"
+                            selectedRole === role.id
+                              ? "border-primary bg-primary/5"
+                              : "border-border"
                           }`}
                           onClick={() => setSelectedRole(role.id)}
                         >
@@ -162,14 +188,20 @@ export default function AuthPage() {
                             <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center space-x-2">
-                                <span className="font-medium text-foreground">{role.name}</span>
-                                <Badge className={role.color}>{role.name}</Badge>
+                                <span className="font-medium text-foreground">
+                                  {role.name}
+                                </span>
+                                <Badge className={role.color}>
+                                  {role.name}
+                                </Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {role.description}
+                              </p>
                             </div>
                           </div>
                         </div>
-                      )
+                      );
                     })}
                   </div>
                 </div>
@@ -186,13 +218,17 @@ export default function AuthPage() {
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                {isLogin
+                  ? "Don't have an account? Sign up"
+                  : "Already have an account? Sign in"}
               </button>
             </div>
 
             {/* Demo Accounts */}
             <div className="mt-6 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center mb-3">Demo Accounts (click to auto-fill)</p>
+              <p className="text-xs text-muted-foreground text-center mb-3">
+                Demo Accounts (click to auto-fill)
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 {roles.map((role) => (
                   <Button
@@ -202,12 +238,14 @@ export default function AuthPage() {
                     type="button"
                     onClick={() => {
                       setFormData({
-                        email: `${role.id.toLowerCase().replace(" ", ".")}@demo.com`,
+                        email: `${role.id
+                          .toLowerCase()
+                          .replace(" ", ".")}@demo.com`,
                         password: "demo123",
                         name: `Demo ${role.name}`,
-                      })
-                      setSelectedRole(role.id)
-                      setIsLogin(false)
+                      });
+                      setSelectedRole(role.id);
+                      setIsLogin(false);
                     }}
                     className="text-xs"
                   >
@@ -221,11 +259,14 @@ export default function AuthPage() {
 
         {/* Back to Landing */}
         <div className="text-center">
-          <Link href="/landing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            href="/landing"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
             ← Back to home
           </Link>
         </div>
       </div>
     </div>
-  )
+  );
 }
