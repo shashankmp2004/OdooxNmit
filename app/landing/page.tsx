@@ -21,60 +21,14 @@ import {
   Smartphone,
 } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Hero } from "@/app/landing/hero";
 import Stats from "@/app/landing/stats";
+import { LazySection } from "@/components/lazy-section";
 
 export default function LandingPage() {
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    // Create intersection observer for scroll animations
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("animate-in");
-          }
-        });
-      },
-      {
-        threshold: 0.1,
-        rootMargin: "0px 0px -50px 0px",
-      }
-    );
-
-    // Observe all elements with scroll animation classes
-    const animationClasses = [
-      ".scroll-animate",
-      ".scroll-animate-fade",
-      ".scroll-animate-slide-left",
-      ".scroll-animate-slide-right",
-      ".scroll-animate-scale",
-    ];
-
-    animationClasses.forEach((className) => {
-      const elements = document.querySelectorAll(className);
-      elements.forEach((el) => observerRef.current?.observe(el));
-    });
-
-    // Auto-animate hero section on page load
-    setTimeout(() => {
-      const heroSection = document.querySelector(".hero-animate");
-      if (heroSection) {
-        heroSection.classList.add("animate-in");
-      }
-    }, 300);
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, []);
-
   const benefits = [
     {
       icon: Shield,
@@ -258,25 +212,28 @@ export default function LandingPage() {
       </motion.div>
 
       {/* Stats Section */}
-      <motion.div
-        className="scroll-animate scroll-animate-delay-1"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      >
-        <Stats />
-      </motion.div>
+      <LazySection minHeight="400px" threshold={0.2}>
+        <motion.div
+          className="scroll-animate scroll-animate-delay-1"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+        >
+          <Stats />
+        </motion.div>
+      </LazySection>
 
       {/* Features Section */}
-      <motion.section
-        id="features"
-        className="py-20 scroll-animate"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      >
+      <LazySection minHeight="600px" threshold={0.1}>
+        <motion.section
+          id="features"
+          className="py-20 scroll-animate"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+        >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl text-balance">
@@ -372,15 +329,17 @@ export default function LandingPage() {
           </div>
         </div>
       </motion.section>
+      </LazySection>
 
       {/* Benefits Section */}
-      <motion.section
-        className="py-20 bg-muted/20 scroll-animate"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      >
+      <LazySection minHeight="500px" threshold={0.1}>
+        <motion.section
+          className="py-20 bg-muted/20 scroll-animate"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+        >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="mx-auto max-w-2xl text-center mb-16 scroll-animate scroll-animate-delay-1"
@@ -442,15 +401,17 @@ export default function LandingPage() {
           </div>
         </div>
       </motion.section>
+      </LazySection>
 
       {/* CTA Section */}
-      <motion.section
-        className="py-20 scroll-animate"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      >
+      <LazySection minHeight="400px" threshold={0.1}>
+        <motion.section
+          className="py-20 scroll-animate"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+        >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             className="mx-auto max-w-2xl text-center scroll-animate scroll-animate-delay-1"
@@ -491,6 +452,7 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </motion.section>
+      </LazySection>
 
       {/* Separator Line */}
       <motion.hr
@@ -502,15 +464,9 @@ export default function LandingPage() {
       />
 
       {/* Footer */}
-      <motion.footer
-        className="border-t border-border/40 py-12 bg-muted/30 scroll-animate"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.1 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      >
+      <footer className="border-t border-border/40 py-12 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8 scroll-animate scroll-animate-delay-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
             {/* Company Info */}
             <div className="lg:col-span-1">
               <div className="flex items-center space-x-2 mb-4">
@@ -695,7 +651,7 @@ export default function LandingPage() {
           </div>
 
           {/* Industry Stats */}
-          <div className="border-t border-border/40 pt-8 mb-8 scroll-animate scroll-animate-delay-2">
+          <div className="border-t border-border/40 pt-8 mb-8">
             <div className="text-center max-w-2xl mx-auto">
               <h3 className="text-sm font-semibold text-foreground mb-4">
                 Trusted by Industry Leaders
@@ -720,7 +676,7 @@ export default function LandingPage() {
           </div>
 
           {/* Trust Badges  */}
-          <div className="border-t border-border/40 pt-8 mb-8 scroll-animate scroll-animate-delay-3">
+          <div className="border-t border-border/40 pt-8 mb-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Trust Badges */}
               <div>
@@ -746,7 +702,7 @@ export default function LandingPage() {
           </div>
 
           {/* Legal & Copyright */}
-          <div className="border-t border-border/40 pt-6 scroll-animate scroll-animate-delay-4">
+          <div className="border-t border-border/40 pt-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
                 <Link
@@ -780,7 +736,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </motion.footer>
+      </footer>
     </div>
   );
 }
