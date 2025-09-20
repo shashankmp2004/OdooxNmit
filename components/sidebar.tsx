@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/components/auth-provider"
+import { SignoutDialog } from "@/components/signout-dialog"
 import {
   LayoutDashboard,
   ClipboardList,
@@ -18,6 +19,7 @@ import {
   ChevronRight,
   Factory,
   LogOut,
+  Shield,
 } from "lucide-react"
 
 const navigation = [
@@ -65,12 +67,9 @@ export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
 
   // Use the actual user role from session if available
   const currentRole = userRole || session?.user?.role || "MANAGER"
+  const isAdmin = currentRole === "ADMIN" || currentRole === "admin"
   
   const filteredNavigation = navigation.filter((item) => item.roles.includes(currentRole))
-
-  const handleLogout = () => {
-    router.push("/api/auth/signout")
-  }
 
   return (
     <div
@@ -128,6 +127,31 @@ export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
             </Link>
           )
         })}
+
+        {/* Admin Portal Access */}
+        {isAdmin && (
+          <>
+            <div className="border-t border-sidebar-border my-2 pt-2">
+              {!collapsed && (
+                <p className="text-xs text-sidebar-muted-foreground uppercase tracking-wider px-2 py-1">
+                  Administration
+                </p>
+              )}
+            </div>
+            <Link href="/admin">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start gap-3 text-orange-600 hover:bg-orange-50 hover:text-orange-700 border border-orange-200",
+                  collapsed && "px-2",
+                )}
+              >
+                <Shield className="h-4 w-4 flex-shrink-0" />
+                {!collapsed && <span>Admin Portal</span>}
+              </Button>
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Settings and Logout */}
@@ -145,17 +169,18 @@ export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
           </Button>
         </Link>
 
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className={cn(
-            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            collapsed && "px-2",
-          )}
-        >
-          <LogOut className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && <span>Sign Out</span>}
-        </Button>
+        <SignoutDialog>
+          <Button
+            variant="ghost"
+            className={cn(
+              "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              collapsed && "px-2",
+            )}
+          >
+            <LogOut className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && <span>Sign Out</span>}
+          </Button>
+        </SignoutDialog>
       </div>
     </div>
   )

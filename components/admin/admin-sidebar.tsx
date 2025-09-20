@@ -68,6 +68,12 @@ const navigation = [
         description: "Product catalog and BOM management"
       },
       {
+        title: "BOM Management",
+        href: "/admin/bom",
+        icon: FileText,
+        description: "Bill of Materials and product relationships"
+      },
+      {
         title: "Manufacturing Orders",
         href: "/admin/manufacturing-orders",
         icon: Factory,

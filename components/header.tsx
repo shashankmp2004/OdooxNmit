@@ -1,6 +1,6 @@
 "use client"
 
-import { Search, User } from "lucide-react"
+import { Search, User, Settings, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,6 +14,8 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import RealTimeNotifications from "@/components/real-time-notifications"
+import { SignoutDialog } from "@/components/signout-dialog"
+import Link from "next/link"
 
 interface HeaderProps {
   title: string
@@ -25,10 +27,7 @@ export function Header({ title, userName }: HeaderProps) {
   const router = useRouter()
 
   const displayName = userName || `${session?.user?.name} (${session?.user?.role})`
-
-  const handleLogout = () => {
-    router.push("/api/auth/signout")
-  }
+  const isAdmin = session?.user?.role === 'admin'
 
   return (
     <header className="flex items-center justify-between p-4 bg-card border-b border-border">
@@ -42,6 +41,16 @@ export function Header({ title, userName }: HeaderProps) {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search..." className="pl-10 bg-background border-input" />
         </div>
+
+        {/* Admin Portal Access */}
+        {isAdmin && (
+          <Link href="/admin">
+            <Button variant="outline" size="sm" className="flex items-center gap-2 border-orange-200 text-orange-700 hover:bg-orange-50">
+              <Shield className="h-4 w-4" />
+              <span className="hidden md:inline">Admin Portal</span>
+            </Button>
+          </Link>
+        )}
 
         {/* Notifications */}
         <RealTimeNotifications />
@@ -58,9 +67,27 @@ export function Header({ title, userName }: HeaderProps) {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </DropdownMenuItem>
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/admin" className="flex items-center">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Admin Portal
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>Sign out</DropdownMenuItem>
+            <SignoutDialog>
+              <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()}>
+                Sign out
+              </DropdownMenuItem>
+            </SignoutDialog>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

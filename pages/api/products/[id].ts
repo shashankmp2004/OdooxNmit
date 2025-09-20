@@ -23,11 +23,11 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
         const product = await prisma.product.findUnique({
           where: { id },
           include: {
-            bom: {
+            boms: {
               include: {
-                components: {
+                items: {
                   include: {
-                    material: true
+                    component: true
                   }
                 }
               }
@@ -89,11 +89,11 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           where: { id },
           data: parsed.data,
           include: {
-            bom: {
+            boms: {
               include: {
-                components: {
+                items: {
                   include: {
-                    material: true
+                    component: true
                   }
                 }
               }

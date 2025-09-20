@@ -89,13 +89,16 @@ model Product {
   description  String?
   category     String?      // Added for frontend compatibility
   unit         String?      // Added for frontend compatibility (e.g., "pcs", "kg", "lbs")
+  price        Float?       // Added for pricing information
+  stock        Float        @default(0)      // Current stock level
   minStockAlert Int?        // Added for frontend compatibility - minimum stock alert level
   bomLink      String?      // Added for frontend compatibility - BOM reference
   isFinished   Boolean      @default(false)
-  bom          BOM?
+  boms         BOM[]        // Changed to one-to-many relationship
   stockEntries StockEntry[]
   manufacturingOrders ManufacturingOrder[]
   bomComponents BOMComponent[] @relation("MaterialProduct")
+  bomItems     BOMItem[]    @relation("ComponentProduct") // For BOM items where this product is a component
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }
@@ -103,15 +106,33 @@ model Product {
 model BOM {
   id          String        @id @default(uuid())
   product     Product       @relation(fields: [productId], references: [id])
-  productId   String        @unique
-  components  BOMComponent[]
+  productId   String
+  version     String        @default("v1.0") // BOM version
+  description String?       // BOM description
+  isActive    Boolean       @default(true)   // Active/inactive status
+  components  BOMComponent[] @relation("OldBOM") // Keep old relation for backward compatibility
+  items       BOMItem[]     // New BOM items structure
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  @@unique([productId, version]) // Ensure unique version per product
+}
+
+model BOMItem {
+  id          String   @id @default(uuid())
+  bom         BOM      @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  bomId       String
+  component   Product  @relation("ComponentProduct", fields: [componentId], references: [id])
+  componentId String
+  quantity    Float    // Quantity needed
+  unit        String   @default("pcs") // Unit of measurement
+  notes       String?  // Optional notes
+  createdAt   DateTime @default(now())
 }
 
 model BOMComponent {
   id         String   @id @default(uuid())
-  bom        BOM      @relation(fields: [bomId], references: [id])
+  bom        BOM      @relation("OldBOM", fields: [bomId], references: [id])
   bomId      String
   material   Product  @relation("MaterialProduct", fields: [materialId], references: [id])
   materialId String

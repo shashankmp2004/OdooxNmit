@@ -8,6 +8,8 @@ const createProductSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(), // Added for frontend compatibility
   unit: z.string().optional(), // Added for frontend compatibility
+  price: z.number().nonnegative().optional(), // Added for pricing
+  stock: z.number().nonnegative().default(0), // Added for stock level
   minStockAlert: z.number().int().nonnegative().optional(), // Added for frontend compatibility
   bomLink: z.string().optional(), // Added for frontend compatibility
   isFinished: z.boolean().default(false)
@@ -44,11 +46,11 @@ export default requireRole(["ADMIN", "MANAGER", "INVENTORY"], async (req, res) =
           prisma.product.findMany({
             where,
             include: {
-              bom: {
+              boms: {
                 include: {
-                  components: {
+                  items: {
                     include: {
-                      material: true
+                      component: true
                     }
                   }
                 }
@@ -94,11 +96,11 @@ export default requireRole(["ADMIN", "MANAGER", "INVENTORY"], async (req, res) =
         const product = await prisma.product.create({
           data: parsed.data,
           include: {
-            bom: {
+            boms: {
               include: {
-                components: {
+                items: {
                   include: {
-                    material: true
+                    component: true
                   }
                 }
               }
