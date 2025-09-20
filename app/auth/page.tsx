@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { motion, useAnimation } from "framer-motion";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const roles = [
   { id: "MANAGER", name: "Manager", email: "manager@demo.com", icon: User },
@@ -124,6 +125,11 @@ export default function AuthPage() {
       >
         ← Back to Home
       </Link>
+
+      {/* Theme Toggle */}
+      <div className="absolute top-6 right-6">
+        <ThemeToggle />
+      </div>
 
       <div className="w-full max-w-5xl">
         {/* Sign In heading */}

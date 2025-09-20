@@ -1,10 +1,17 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Users,
   Package,
@@ -16,60 +23,60 @@ import {
   CheckCircle,
   Clock,
   Activity,
-} from "lucide-react"
+} from "lucide-react";
 
 interface AdminStats {
   users: {
-    total: number
-    byRole: { role: string; count: number }[]
-    recentSignups: number
-  }
+    total: number;
+    byRole: { role: string; count: number }[];
+    recentSignups: number;
+  };
   products: {
-    total: number
-    lowStock: number
-    categories: { category: string; count: number }[]
-  }
+    total: number;
+    lowStock: number;
+    categories: { category: string; count: number }[];
+  };
   manufacturing: {
-    activeOrders: number
-    completedThisMonth: number
-    pendingWork: number
-    inProgressWork: number
-  }
+    activeOrders: number;
+    completedThisMonth: number;
+    pendingWork: number;
+    inProgressWork: number;
+  };
   stock: {
-    totalValue: number
-    movements: number
-    alerts: number
-  }
+    totalValue: number;
+    movements: number;
+    alerts: number;
+  };
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<AdminStats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("/api/admin/stats")
+        const response = await fetch("/api/admin/stats");
         if (response.ok) {
-          const data = await response.json()
-          setStats(data)
+          const data = await response.json();
+          setStats(data);
         }
       } catch (error) {
-        console.error("Failed to fetch admin stats:", error)
+        console.error("Failed to fetch admin stats:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchStats()
-  }, [])
+    fetchStats();
+  }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <LoadingSpinner size="lg" />
       </div>
-    )
+    );
   }
 
   return (
@@ -82,6 +89,7 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
+          <ThemeToggle />
           <Button variant="outline" size="sm">
             <Activity className="h-4 w-4 mr-2" />
             System Health
@@ -114,7 +122,9 @@ export default function AdminDashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.products.total || 0}</div>
+            <div className="text-2xl font-bold">
+              {stats?.products.total || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               {stats?.products.lowStock || 0} low stock alerts
             </p>
@@ -127,9 +137,12 @@ export default function AdminDashboard() {
             <Factory className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.manufacturing.activeOrders || 0}</div>
+            <div className="text-2xl font-bold">
+              {stats?.manufacturing.activeOrders || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {stats?.manufacturing.completedThisMonth || 0} completed this month
+              {stats?.manufacturing.completedThisMonth || 0} completed this
+              month
             </p>
           </CardContent>
         </Card>
@@ -140,7 +153,9 @@ export default function AdminDashboard() {
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.manufacturing.pendingWork || 0}</div>
+            <div className="text-2xl font-bold">
+              {stats?.manufacturing.pendingWork || 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               {stats?.manufacturing.inProgressWork || 0} in progress
             </p>
@@ -159,7 +174,10 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="space-y-3">
               {stats?.users.byRole.map((role) => (
-                <div key={role.role} className="flex items-center justify-between">
+                <div
+                  key={role.role}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{role.role}</Badge>
                   </div>
@@ -179,8 +197,13 @@ export default function AdminDashboard() {
           <CardContent>
             <div className="space-y-3">
               {stats?.products.categories.map((category) => (
-                <div key={category.category} className="flex items-center justify-between">
-                  <span className="text-sm">{category.category || 'Uncategorized'}</span>
+                <div
+                  key={category.category}
+                  className="flex items-center justify-between"
+                >
+                  <span className="text-sm">
+                    {category.category || "Uncategorized"}
+                  </span>
                   <span className="font-medium">{category.count}</span>
                 </div>
               ))}
@@ -222,5 +245,5 @@ export default function AdminDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

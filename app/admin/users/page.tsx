@@ -1,221 +1,255 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Trash2, Edit, Plus, Search } from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Trash2, Edit, Plus, Search } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-const roles = ['ADMIN', 'MANAGER', 'OPERATOR', 'INVENTORY']
+const roles = ["ADMIN", "MANAGER", "OPERATOR", "INVENTORY"];
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedRole, setSelectedRole] = useState<string>('all')
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string>("all");
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: 'OPERATOR',
-    password: ''
-  })
+    name: "",
+    email: "",
+    role: "OPERATOR",
+    password: "",
+  });
 
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    fetchUsers();
+  }, []);
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users')
+      const response = await fetch("/api/admin/users");
       if (response.ok) {
-        const data = await response.json()
-        setUsers(data)
+        const data = await response.json();
+        setUsers(data);
       } else {
         toast({
           title: "Error",
           description: "Failed to fetch users",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error fetching users:', error)
+      console.error("Error fetching users:", error);
       toast({
         title: "Error",
         description: "Failed to fetch users",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCreateUser = async () => {
     try {
-      const response = await fetch('/api/admin/users', {
-        method: 'POST',
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData)
-      })
+        body: JSON.stringify(formData),
+      });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "User created successfully"
-        })
-        setIsCreateDialogOpen(false)
-        setFormData({ name: '', email: '', role: 'OPERATOR', password: '' })
-        fetchUsers()
+          description: "User created successfully",
+        });
+        setIsCreateDialogOpen(false);
+        setFormData({ name: "", email: "", role: "OPERATOR", password: "" });
+        fetchUsers();
       } else {
-        const error = await response.json()
+        const error = await response.json();
         toast({
           title: "Error",
           description: error.error || "Failed to create user",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error creating user:', error)
+      console.error("Error creating user:", error);
       toast({
         title: "Error",
         description: "Failed to create user",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleUpdateUser = async () => {
-    if (!editingUser) return
+    if (!editingUser) return;
 
     try {
       const updateData = {
         name: formData.name,
         email: formData.email,
         role: formData.role,
-        ...(formData.password && { password: formData.password })
-      }
+        ...(formData.password && { password: formData.password }),
+      };
 
       const response = await fetch(`/api/admin/users/${editingUser.id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(updateData)
-      })
+        body: JSON.stringify(updateData),
+      });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "User updated successfully"
-        })
-        setIsEditDialogOpen(false)
-        setEditingUser(null)
-        setFormData({ name: '', email: '', role: 'OPERATOR', password: '' })
-        fetchUsers()
+          description: "User updated successfully",
+        });
+        setIsEditDialogOpen(false);
+        setEditingUser(null);
+        setFormData({ name: "", email: "", role: "OPERATOR", password: "" });
+        fetchUsers();
       } else {
-        const error = await response.json()
+        const error = await response.json();
         toast({
           title: "Error",
           description: error.error || "Failed to update user",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error updating user:', error)
+      console.error("Error updating user:", error);
       toast({
         title: "Error",
         description: "Failed to update user",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleDeleteUser = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return
+    if (!confirm("Are you sure you want to delete this user?")) return;
 
     try {
       const response = await fetch(`/api/admin/users/${id}`, {
-        method: 'DELETE'
-      })
+        method: "DELETE",
+      });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "User deleted successfully"
-        })
-        fetchUsers()
+          description: "User deleted successfully",
+        });
+        fetchUsers();
       } else {
-        const error = await response.json()
+        const error = await response.json();
         toast({
           title: "Error",
           description: error.error || "Failed to delete user",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error deleting user:', error)
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
         description: "Failed to delete user",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const openEditDialog = (user: User) => {
-    setEditingUser(user)
+    setEditingUser(user);
     setFormData({
       name: user.name,
       email: user.email,
       role: user.role,
-      password: ''
-    })
-    setIsEditDialogOpen(true)
-  }
+      password: "",
+    });
+    setIsEditDialogOpen(true);
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'ADMIN': return 'bg-red-500'
-      case 'MANAGER': return 'bg-blue-500'
-      case 'OPERATOR': return 'bg-green-500'
-      case 'INVENTORY': return 'bg-yellow-500'
-      default: return 'bg-gray-500'
+      case "ADMIN":
+        return "bg-red-500";
+      case "MANAGER":
+        return "bg-blue-500";
+      case "OPERATOR":
+        return "bg-green-500";
+      case "INVENTORY":
+        return "bg-yellow-500";
+      default:
+        return "bg-gray-500";
     }
-  }
+  };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole
-    return matchesSearch && matchesRole
-  })
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = selectedRole === "all" || user.role === selectedRole;
+    return matchesSearch && matchesRole;
+  });
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -225,74 +259,94 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold">Users Management</h1>
           <p className="text-gray-600">Manage user accounts and permissions</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
-              <DialogDescription>
-                Add a new user to the system
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter user name"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="Enter email address"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="role">Role</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {role}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Enter password"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
+        <div className="flex gap-2 items-center">
+          <ThemeToggle />
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add User
               </Button>
-              <Button onClick={handleCreateUser}>Create User</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+                <DialogDescription>
+                  Add a new user to the system
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder="Enter user name"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    placeholder="Enter email address"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, role: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    placeholder="Enter password"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateUser}>Create User</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -332,9 +386,7 @@ export default function UsersPage() {
       <Card>
         <CardHeader>
           <CardTitle>Users ({filteredUsers.length})</CardTitle>
-          <CardDescription>
-            A list of all users in your system
-          </CardDescription>
+          <CardDescription>A list of all users in your system</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -353,7 +405,9 @@ export default function UsersPage() {
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <Badge className={`text-white ${getRoleBadgeColor(user.role)}`}>
+                    <Badge
+                      className={`text-white ${getRoleBadgeColor(user.role)}`}
+                    >
                       {user.role}
                     </Badge>
                   </TableCell>
@@ -401,7 +455,9 @@ export default function UsersPage() {
               <Input
                 id="edit-name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="Enter user name"
               />
             </div>
@@ -411,13 +467,20 @@ export default function UsersPage() {
                 id="edit-email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 placeholder="Enter email address"
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-role">Role</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <Select
+                value={formData.role}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, role: value })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
@@ -436,13 +499,18 @@ export default function UsersPage() {
                 id="edit-password"
                 type="password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 placeholder="Leave empty to keep current password"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleUpdateUser}>Update User</Button>
@@ -450,5 +518,5 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

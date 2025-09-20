@@ -27,6 +27,7 @@ import { motion } from "framer-motion";
 import { Hero } from "@/app/landing/hero";
 import Stats from "@/app/landing/stats";
 import { LazySection } from "@/components/lazy-section";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function LandingPage() {
   const benefits = [
@@ -97,6 +98,7 @@ export default function LandingPage() {
               >
                 About
               </Link>
+              <ThemeToggle />
               <Button asChild variant="outline" size="sm">
                 <Link href="/auth?mode=login">Sign In</Link>
               </Button>

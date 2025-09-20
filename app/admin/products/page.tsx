@@ -1,254 +1,303 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Trash2, Edit, Plus, Search, Package, AlertTriangle } from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Trash2,
+  Edit,
+  Plus,
+  Search,
+  Package,
+  AlertTriangle,
+} from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface Product {
-  id: string
-  name: string
-  description?: string
-  category?: string
-  unit?: string
-  price?: number
-  minStockAlert?: number
-  bomLink?: string
-  currentStock: number
-  createdAt: string
-  updatedAt: string
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  unit?: string;
+  price?: number;
+  minStockAlert?: number;
+  bomLink?: string;
+  currentStock: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-const categories = ['Raw Material', 'Component', 'Finished Good', 'Consumable']
-const units = ['pcs', 'kg', 'ltr', 'm', 'sqm', 'cum']
+const categories = ["Raw Material", "Component", "Finished Good", "Consumable"];
+const units = ["pcs", "kg", "ltr", "m", "sqm", "cum"];
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: '',
-    unit: '',
-    price: '',
-    minStockAlert: '',
-    bomLink: ''
-  })
+    name: "",
+    description: "",
+    category: "",
+    unit: "",
+    price: "",
+    minStockAlert: "",
+    bomLink: "",
+  });
 
   useEffect(() => {
-    fetchProducts()
-  }, [])
+    fetchProducts();
+  }, []);
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/admin/products')
+      const response = await fetch("/api/admin/products");
       if (response.ok) {
-        const data = await response.json()
-        setProducts(data)
+        const data = await response.json();
+        setProducts(data);
       } else {
         toast({
           title: "Error",
           description: "Failed to fetch products",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error fetching products:', error)
+      console.error("Error fetching products:", error);
       toast({
         title: "Error",
         description: "Failed to fetch products",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCreateProduct = async () => {
     try {
-      const response = await fetch('/api/admin/products', {
-        method: 'POST',
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...formData,
           price: formData.price ? parseFloat(formData.price) : null,
-          minStockAlert: formData.minStockAlert ? parseInt(formData.minStockAlert) : null
-        })
-      })
+          minStockAlert: formData.minStockAlert
+            ? parseInt(formData.minStockAlert)
+            : null,
+        }),
+      });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Product created successfully"
-        })
-        setIsCreateDialogOpen(false)
+          description: "Product created successfully",
+        });
+        setIsCreateDialogOpen(false);
         setFormData({
-          name: '',
-          description: '',
-          category: '',
-          unit: '',
-          price: '',
-          minStockAlert: '',
-          bomLink: ''
-        })
-        fetchProducts()
+          name: "",
+          description: "",
+          category: "",
+          unit: "",
+          price: "",
+          minStockAlert: "",
+          bomLink: "",
+        });
+        fetchProducts();
       } else {
-        const error = await response.json()
+        const error = await response.json();
         toast({
           title: "Error",
           description: error.error || "Failed to create product",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error creating product:', error)
+      console.error("Error creating product:", error);
       toast({
         title: "Error",
         description: "Failed to create product",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleUpdateProduct = async () => {
-    if (!editingProduct) return
+    if (!editingProduct) return;
 
     try {
       const response = await fetch(`/api/admin/products/${editingProduct.id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...formData,
           price: formData.price ? parseFloat(formData.price) : null,
-          minStockAlert: formData.minStockAlert ? parseInt(formData.minStockAlert) : null
-        })
-      })
+          minStockAlert: formData.minStockAlert
+            ? parseInt(formData.minStockAlert)
+            : null,
+        }),
+      });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Product updated successfully"
-        })
-        setIsEditDialogOpen(false)
-        setEditingProduct(null)
+          description: "Product updated successfully",
+        });
+        setIsEditDialogOpen(false);
+        setEditingProduct(null);
         setFormData({
-          name: '',
-          description: '',
-          category: '',
-          unit: '',
-          price: '',
-          minStockAlert: '',
-          bomLink: ''
-        })
-        fetchProducts()
+          name: "",
+          description: "",
+          category: "",
+          unit: "",
+          price: "",
+          minStockAlert: "",
+          bomLink: "",
+        });
+        fetchProducts();
       } else {
-        const error = await response.json()
+        const error = await response.json();
         toast({
           title: "Error",
           description: error.error || "Failed to update product",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error updating product:', error)
+      console.error("Error updating product:", error);
       toast({
         title: "Error",
         description: "Failed to update product",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    if (!confirm("Are you sure you want to delete this product?")) return;
 
     try {
       const response = await fetch(`/api/admin/products/${id}`, {
-        method: 'DELETE'
-      })
+        method: "DELETE",
+      });
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Product deleted successfully"
-        })
-        fetchProducts()
+          description: "Product deleted successfully",
+        });
+        fetchProducts();
       } else {
-        const error = await response.json()
+        const error = await response.json();
         toast({
           title: "Error",
           description: error.error || "Failed to delete product",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Error deleting product:', error)
+      console.error("Error deleting product:", error);
       toast({
         title: "Error",
         description: "Failed to delete product",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const openEditDialog = (product: Product) => {
-    setEditingProduct(product)
+    setEditingProduct(product);
     setFormData({
       name: product.name,
-      description: product.description || '',
-      category: product.category || '',
-      unit: product.unit || '',
-      price: product.price?.toString() || '',
-      minStockAlert: product.minStockAlert?.toString() || '',
-      bomLink: product.bomLink || ''
-    })
-    setIsEditDialogOpen(true)
-  }
+      description: product.description || "",
+      category: product.category || "",
+      unit: product.unit || "",
+      price: product.price?.toString() || "",
+      minStockAlert: product.minStockAlert?.toString() || "",
+      bomLink: product.bomLink || "",
+    });
+    setIsEditDialogOpen(true);
+  };
 
   const getCategoryBadgeColor = (category: string) => {
     switch (category) {
-      case 'Raw Material': return 'bg-orange-500'
-      case 'Component': return 'bg-blue-500'
-      case 'Finished Good': return 'bg-green-500'
-      case 'Consumable': return 'bg-purple-500'
-      default: return 'bg-gray-500'
+      case "Raw Material":
+        return "bg-orange-500";
+      case "Component":
+        return "bg-blue-500";
+      case "Finished Good":
+        return "bg-green-500";
+      case "Consumable":
+        return "bg-purple-500";
+      default:
+        return "bg-gray-500";
     }
-  }
+  };
 
   const isLowStock = (product: Product) => {
-    return product.minStockAlert && product.currentStock < product.minStockAlert
-  }
+    return (
+      product.minStockAlert && product.currentStock < product.minStockAlert
+    );
+  };
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.description &&
+        product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory =
+      selectedCategory === "all" || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -256,114 +305,148 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Products Management</h1>
-          <p className="text-gray-600">Manage product catalog and inventory settings</p>
+          <p className="text-gray-600">
+            Manage product catalog and inventory settings
+          </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Product</DialogTitle>
-              <DialogDescription>
-                Add a new product to the catalog
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter product name"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Enter product description"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="unit">Unit</Label>
-                  <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map((unit) => (
-                        <SelectItem key={unit} value={unit}>
-                          {unit}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="price">Price</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="minStockAlert">Min Stock Alert</Label>
-                  <Input
-                    id="minStockAlert"
-                    type="number"
-                    value={formData.minStockAlert}
-                    onChange={(e) => setFormData({ ...formData, minStockAlert: e.target.value })}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="bomLink">BOM Link</Label>
-                <Input
-                  id="bomLink"
-                  value={formData.bomLink}
-                  onChange={(e) => setFormData({ ...formData, bomLink: e.target.value })}
-                  placeholder="Enter BOM reference or link"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
+        <div className="flex gap-2 items-center">
+          <ThemeToggle />
+          <Dialog
+            open={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Product
               </Button>
-              <Button onClick={handleCreateProduct}>Create Product</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Product</DialogTitle>
+                <DialogDescription>
+                  Add a new product to the catalog
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="Enter product name"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    placeholder="Enter product description"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="unit">Unit</Label>
+                    <Select
+                      value={formData.unit}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, unit: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="price">Price</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData({ ...formData, price: e.target.value })
+                      }
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="minStockAlert">Min Stock Alert</Label>
+                    <Input
+                      id="minStockAlert"
+                      type="number"
+                      value={formData.minStockAlert}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          minStockAlert: e.target.value,
+                        })
+                      }
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="bomLink">BOM Link</Label>
+                  <Input
+                    id="bomLink"
+                    value={formData.bomLink}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bomLink: e.target.value })
+                    }
+                    placeholder="Enter BOM reference or link"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateProduct}>Create Product</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -382,7 +465,10 @@ export default function ProductsPage() {
                 className="pl-10"
               />
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
@@ -429,21 +515,27 @@ export default function ProductsPage() {
                       <div>
                         <div className="font-medium">{product.name}</div>
                         {product.description && (
-                          <div className="text-sm text-gray-500">{product.description}</div>
+                          <div className="text-sm text-gray-500">
+                            {product.description}
+                          </div>
                         )}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     {product.category && (
-                      <Badge className={`text-white ${getCategoryBadgeColor(product.category)}`}>
+                      <Badge
+                        className={`text-white ${getCategoryBadgeColor(
+                          product.category
+                        )}`}
+                      >
                         {product.category}
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>{product.unit || '-'}</TableCell>
+                  <TableCell>{product.unit || "-"}</TableCell>
                   <TableCell>
-                    {product.price ? `$${product.price.toFixed(2)}` : '-'}
+                    {product.price ? `$${product.price.toFixed(2)}` : "-"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -453,7 +545,7 @@ export default function ProductsPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{product.minStockAlert || '-'}</TableCell>
+                  <TableCell>{product.minStockAlert || "-"}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
@@ -496,13 +588,20 @@ export default function ProductsPage() {
                 <Input
                   id="edit-name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="Enter product name"
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-category">Category</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, category: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -521,14 +620,21 @@ export default function ProductsPage() {
               <Textarea
                 id="edit-description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Enter product description"
               />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-unit">Unit</Label>
-                <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
+                <Select
+                  value={formData.unit}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, unit: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
@@ -548,7 +654,9 @@ export default function ProductsPage() {
                   type="number"
                   step="0.01"
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
                   placeholder="0.00"
                 />
               </div>
@@ -558,7 +666,9 @@ export default function ProductsPage() {
                   id="edit-minStockAlert"
                   type="number"
                   value={formData.minStockAlert}
-                  onChange={(e) => setFormData({ ...formData, minStockAlert: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, minStockAlert: e.target.value })
+                  }
                   placeholder="0"
                 />
               </div>
@@ -568,13 +678,18 @@ export default function ProductsPage() {
               <Input
                 id="edit-bomLink"
                 value={formData.bomLink}
-                onChange={(e) => setFormData({ ...formData, bomLink: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, bomLink: e.target.value })
+                }
                 placeholder="Enter BOM reference or link"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleUpdateProduct}>Update Product</Button>
@@ -582,5 +697,5 @@ export default function ProductsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
