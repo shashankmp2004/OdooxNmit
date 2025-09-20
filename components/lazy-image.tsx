@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { cn } from '@/lib/utils';
-import { useLazyLoad } from '@/hooks/use-lazy-load';
+import { useState } from "react";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { useLazyLoad } from "@/hooks/use-lazy-load";
 
 interface LazyImageProps {
   src: string;
@@ -25,7 +25,7 @@ export function LazyImage({
   width,
   height,
   className,
-  placeholder = '/placeholder.svg',
+  placeholder = "/placeholder.svg",
   priority = false,
   fill = false,
   sizes,
@@ -34,10 +34,10 @@ export function LazyImage({
 }: LazyImageProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  
+
   const { elementRef, isLoaded } = useLazyLoad({
     threshold: 0.1,
-    rootMargin: '100px',
+    rootMargin: "100px",
     triggerOnce: true,
   });
 
@@ -52,7 +52,7 @@ export function LazyImage({
         className={className}
         fill={fill}
         priority={priority}
-        placeholder={blurDataURL ? 'blur' : 'empty'}
+        placeholder={blurDataURL ? "blur" : "empty"}
         blurDataURL={blurDataURL}
         sizes={sizes}
         quality={quality}
@@ -66,8 +66,8 @@ export function LazyImage({
     <div
       ref={elementRef}
       className={cn(
-        'relative overflow-hidden',
-        fill ? 'w-full h-full' : '',
+        "relative overflow-hidden",
+        fill ? "w-full h-full" : "",
         className
       )}
       style={!fill ? { width, height } : undefined}
@@ -78,7 +78,7 @@ export function LazyImage({
           <span className="text-gray-400 text-sm">Loading...</span>
         </div>
       )}
-      
+
       {/* Main Image */}
       {shouldLoad && (
         <Image
@@ -90,10 +90,10 @@ export function LazyImage({
           sizes={sizes}
           quality={quality}
           className={cn(
-            'transition-opacity duration-300',
-            imageLoaded ? 'opacity-100' : 'opacity-0'
+            "transition-opacity duration-300",
+            imageLoaded ? "opacity-100" : "opacity-0"
           )}
-          placeholder={blurDataURL ? 'blur' : 'empty'}
+          placeholder={blurDataURL ? "blur" : "empty"}
           blurDataURL={blurDataURL}
           onLoad={() => setImageLoaded(true)}
           onError={() => {
