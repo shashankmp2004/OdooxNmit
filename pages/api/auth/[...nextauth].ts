@@ -22,19 +22,19 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email }
         });
 
-        if (!user || !user.password) {
+        if (!user || !user.passwordHash) {
           return null;
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        
+        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+
         if (!isValid) {
           return null;
         }
 
         return {
           id: user.id,
-          name: user.name,
+          name: user.name || user.fullName,
           email: user.email,
           role: user.role,
           image: user.avatarUrl
