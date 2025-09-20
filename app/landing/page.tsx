@@ -21,6 +21,10 @@ import {
   Smartphone,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { User, Settings as Cog, Shield as ShieldIcon } from "lucide-react";
+import { SignoutDialog } from "@/components/signout-dialog";
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -29,6 +33,7 @@ import Stats from "@/app/landing/stats";
 
 export default function LandingPage() {
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     // Create intersection observer for scroll animations
@@ -236,12 +241,56 @@ export default function LandingPage() {
               >
                 About
               </Link>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/auth?mode=login">Sign In</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/auth?mode=signup">Get Started</Link>
-              </Button>
+              {status === "authenticated" ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span className="hidden lg:inline">{session.user?.name || session.user?.email}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      Signed in as
+                      <div className="text-xs text-muted-foreground truncate">{session.user?.email}</div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Cog className="h-4 w-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
+                    {(session.user as any)?.role === "ADMIN" && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="flex items-center">
+                            <ShieldIcon className="h-4 w-4 mr-2" />
+                            Admin Portal
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <SignoutDialog>
+                      <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()}>
+                        Sign out
+                      </DropdownMenuItem>
+                    </SignoutDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/auth?mode=login">Sign In</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href="/auth?mode=signup">Get Started</Link>
+                  </Button>
+                </>
+              )}
             </motion.div>
           </div>
         </div>
@@ -292,7 +341,7 @@ export default function LandingPage() {
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Left Column */}
             <div className="space-y-8">
-              <Card className="p-8 bg-card/50 border-border/50 bg-white/10 backdrop-blur-md">
+              <Card className="p-8 bg-card/50 border-border/50 backdrop-blur-md">
                 <div className="flex items-start space-x-4">
                   <BarChart3 className="h-8 w-8 text-primary flex-shrink-0" />
                   <div>
@@ -307,7 +356,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               </Card>
-              <Card className="p-8 bg-card/50 border-border/50 bg-white/10 backdrop-blur-md">
+              <Card className="p-8 bg-card/50 border-border/50 backdrop-blur-md">
                 <div className="flex items-start space-x-4">
                   <Users className="h-8 w-8 text-primary flex-shrink-0" />
                   <div>
@@ -326,7 +375,7 @@ export default function LandingPage() {
 
             {/* Right Column */}
             <div className="relative">
-              <Card className="p-6 bg-card/30 border-border/30 bg-white/10 backdrop-blur-md">
+              <Card className="p-6 bg-card/30 border-border/30 backdrop-blur-md">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-foreground">
