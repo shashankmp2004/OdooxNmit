@@ -380,8 +380,10 @@ async function main() {
   console.log("✅ Stock entries created");
 
   // Sample Manufacturing Orders with updated schema
-  const tableMO = await prisma.manufacturingOrder.create({
-    data: {
+  const tableMO = await prisma.manufacturingOrder.upsert({
+    where: { orderNo: "MO-2024-001" },
+    update: {},
+    create: {
       productId: table.id,
       bomId: tableBom.id,
       quantityToProduce: 5,
@@ -403,8 +405,10 @@ async function main() {
     }
   });
 
-  const chairMO = await prisma.manufacturingOrder.create({
-    data: {
+  const chairMO = await prisma.manufacturingOrder.upsert({
+    where: { orderNo: "MO-2024-002" },
+    update: {},
+    create: {
       productId: chair.id,
       bomId: chairBom.id,
       quantityToProduce: 10,
