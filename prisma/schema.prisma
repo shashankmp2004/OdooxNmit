@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS for status fields, keeps data consistent
+enum UserRole {
+  MANUFACTURING_MANAGER
+  OPERATOR
+  INVENTORY_MANAGER
+  ADMIN
+}
+
+enum OrderStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum WorkOrderStatus {
+  PENDING
+  STARTED
+  PAUSED
+  COMPLETED
+}
+
+// Models based on the Hackathon Problem Statement
+
+model User {
+  id                String            @id @default(cuid())
+  email             String            @unique
+  name              String?
+  password          String
+  role              UserRole          @default(OPERATOR)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  assignedWorkOrders WorkOrder[]
+}
+
+model Product {
+  id                  String               @id @default(cuid())
+  name                String               @unique
+  stock               Int                  @default(0)
+  isFinishedGood      Boolean              @default(false) // Differentiates raw materials from final products
+  bom                 BillOfMaterials?     @relation(fields: [billOfMaterialsId], references: [id])
+  billOfMaterialsId   String?              @unique
+  componentsInBOMs    BOMComponent[]
+  manufacturingOrders ManufacturingOrder[]
+  stockLedgerEntries  StockLedger[]
+}
+
+model BillOfMaterials {
+  id         String         @id @default(cuid())
+  product    Product?       // The finished good this BOM is for
+  components BOMComponent[]
+  operations BOMOperation[]
+}
+
+model BOMComponent {
+  id                String          @id @default(cuid())
+  quantity          Float           // e.g., 4 units of Wooden Legs
+  billOfMaterials   BillOfMaterials @relation(fields: [billOfMaterialsId], references: [id])
+  billOfMaterialsId String
+  component         Product         @relation(fields: [componentId], references: [id]) // The raw material
+  componentId       String
+}
+
+model BOMOperation {
+  id                String          @id @default(cuid())
+  name              String          // e.g., "Assembly", "Painting"
+  durationMinutes   Int
+  billOfMaterials   BillOfMaterials @relation(fields: [billOfMaterialsId], references: [id])
+  billOfMaterialsId String
+  workCenter        WorkCenter      @relation(fields: [workCenterId], references: [id])
+  workCenterId      String
+}
+
+model WorkCenter {
+  id         String         @id @default(cuid())
+  name       String         @unique // e.g., "Assembly Line", "Paint Floor"
+  costPerHour Decimal
+  operations BOMOperation[]
+  workOrders WorkOrder[]
+}
+
+model ManufacturingOrder {
+  id          String      @id @default(cuid())
+  quantity    Int
+  status      OrderStatus @default(PLANNED)
+  deadline    DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  product     Product     @relation(fields: [productId], references: [id])
+  productId   String
+  workOrders  WorkOrder[]
+}
+
+model WorkOrder {
+  id                   String         @id @default(cuid())
+  name                 String         // e.g., "Assemble 10 Tables"
+  status               WorkOrderStatus @default(PENDING)
+  startTime            DateTime?
+  endTime              DateTime?
+  manufacturingOrder   ManufacturingOrder @relation(fields: [manufacturingOrderId], references: [id])
+  manufacturingOrderId String
+  workCenter           WorkCenter     @relation(fields: [workCenterId], references: [id])
+  workCenterId         String
+  assignedTo           User?          @relation(fields: [assignedToId], references: [id])
+  assignedToId         String?
+}
+
+model StockLedger {
+  id             String   @id @default(cuid())
+  quantityChange Int      // e.g., -40 for consumption, +10 for production
+  timestamp      DateTime @default(now())
+  product        Product  @relation(fields: [productId], references: [id])
+  productId      String
+}

@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NMITxODOO Team80 Monorepo
+
+This repository is organized as a monorepo with separate frontend and backend workspaces.
+
+## Structure
+
+- `frontend/OdooxNmit-main/` — Next.js 14+ app (your team's provided frontend)
+- `backend/` — Node.js Express + Prisma backend API
+- `prisma/` — Prisma schema and seed scripts (shared by backend)
+- `.env` — Environment variables (used by backend and Prisma)
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies (from repo root)
+
+```bash
+npm install
+```
+
+### 2. Set up the database
+
+- Ensure PostgreSQL is running and the connection string in `.env` is correct.
+- Run migrations and seed the database:
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+### 3. Start development servers
+
+- To start both backend and frontend (Windows):
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Or start individually:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev:backend
+npm run dev:frontend
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+  - Backend: http://localhost:4000
+  - Frontend: http://localhost:3000
 
-## Learn More
+### 4. API Integration
 
-To learn more about Next.js, take a look at the following resources:
+- The frontend proxies `/api/*` requests to the backend automatically in development.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Useful Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run db:migrate` — Run Prisma migrations
+- `npm run db:seed` — Seed the database
+- `npm run prisma:studio` — Open Prisma Studio (DB GUI)
+- `npm run build` — Build both frontend and backend
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Remove any empty or obsolete files in `src/app` and root-level Next.js config files if you wish.
+- All backend environment variables should be placed in the root `.env` file.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+For any issues, check the logs in the terminal for errors during install or startup.
