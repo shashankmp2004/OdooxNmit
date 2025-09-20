@@ -30,7 +30,7 @@ export function useSocket(options: UseSocketOptions = { autoConnect: true }) {
   }, []);
 
   useEffect(() => {
-    debugger;
+    
     if (!session?.user || !options.autoConnect) return;
 
     const connectSocket = () => {

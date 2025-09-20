@@ -15,6 +15,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import RealTimeNotifications from "@/components/real-time-notifications"
 import { SignoutDialog } from "@/components/signout-dialog"
+import { ThemeToggle } from "@/components/theme-toggle"
 import Link from "next/link"
 
 interface HeaderProps {
@@ -54,6 +55,9 @@ export function Header({ title, userName }: HeaderProps) {
 
         {/* Notifications */}
         <RealTimeNotifications />
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* User Menu */}
         <DropdownMenu>
