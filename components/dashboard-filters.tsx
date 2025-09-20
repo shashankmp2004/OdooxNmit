@@ -51,17 +51,17 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
 
         {/* Status Filter */}
         <Select onValueChange={onStatusChange}>
-          <SelectTrigger className="w-full sm:w-40 bg-background border-input">
+          <SelectTrigger className="w-full sm:w-40 bg-background border-input cursor-pointer hover:bg-slate-100 hover:dark:bg-slate-800 transition-colors duration-200">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="planned">Planned</SelectItem>
-            <SelectItem value="in-progress">In Progress</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="delayed">Delayed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="all" className="cursor-pointer">All Status</SelectItem>
+            <SelectItem value="planned" className="cursor-pointer">Planned</SelectItem>
+            <SelectItem value="in-progress" className="cursor-pointer">In Progress</SelectItem>
+            <SelectItem value="completed" className="cursor-pointer">Completed</SelectItem>
+            <SelectItem value="delayed" className="cursor-pointer">Delayed</SelectItem>
+            <SelectItem value="cancelled" className="cursor-pointer">Cancelled</SelectItem>
           </SelectContent>
         </Select>
 
@@ -72,7 +72,7 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
               <Button
                 variant="outline"
                 className={cn(
-                  "w-32 justify-start text-left font-normal bg-background border-input",
+                  "w-32 justify-start text-left font-normal bg-background border-input cursor-pointer hover:bg-slate-100 hover:dark:bg-slate-800 transition-colors duration-200",
                   !startDate && "text-muted-foreground",
                 )}
               >
@@ -90,7 +90,7 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
               <Button
                 variant="outline"
                 className={cn(
-                  "w-32 justify-start text-left font-normal bg-background border-input",
+                  "w-32 justify-start text-left font-normal bg-background border-input cursor-pointer hover:bg-slate-100 hover:dark:bg-slate-800 transition-colors duration-200",
                   !endDate && "text-muted-foreground",
                 )}
               >
@@ -107,11 +107,11 @@ export function DashboardFilters({ onStatusChange, onSearchChange, onDateRangeCh
 
       {/* Action Buttons */}
       <div className="flex gap-2">
-        <Button variant="outline" className="bg-background border-input">
+        <Button variant="outline" className="bg-background border-input cursor-pointer hover:bg-slate-100 hover:dark:bg-slate-800 transition-colors duration-200">
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer">
           <Plus className="mr-2 h-4 w-4" />
           New Order
         </Button>

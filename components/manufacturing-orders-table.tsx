@@ -145,20 +145,20 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery }: Manufact
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 cursor-pointer hover:bg-slate-100 hover:dark:bg-slate-800 transition-colors duration-200">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer">
                       <Eye className="mr-2 h-4 w-4" />
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer">
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Order
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuItem className="text-destructive cursor-pointer">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Cancel Order
                     </DropdownMenuItem>

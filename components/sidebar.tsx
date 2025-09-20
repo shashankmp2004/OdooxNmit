@@ -89,7 +89,7 @@ export function Sidebar({ userRole = "Manager" }: SidebarProps) {
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="text-sidebar-foreground hover:bg-sidebar-accent"
+          className="text-sidebar-foreground hover:bg-slate-100 hover:dark:bg-slate-800 cursor-pointer transition-colors duration-200"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -113,10 +113,10 @@ export function Sidebar({ userRole = "Manager" }: SidebarProps) {
               <Button
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3 text-sidebar-foreground",
+                  "w-full justify-start gap-3 text-sidebar-foreground cursor-pointer transition-colors duration-200",
                   isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
-                    : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    : "hover:bg-slate-100 hover:dark:bg-slate-800",
                   collapsed && "px-2",
                 )}
               >
@@ -134,7 +134,7 @@ export function Sidebar({ userRole = "Manager" }: SidebarProps) {
           <Button
             variant="ghost"
             className={cn(
-              "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              "w-full justify-start gap-3 text-sidebar-foreground hover:bg-slate-100 hover:dark:bg-slate-800 cursor-pointer transition-colors duration-200",
               collapsed && "px-2",
             )}
           >
@@ -147,7 +147,7 @@ export function Sidebar({ userRole = "Manager" }: SidebarProps) {
           variant="ghost"
           onClick={handleLogout}
           className={cn(
-            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-slate-100 hover:dark:bg-slate-800 cursor-pointer transition-colors duration-200",
             collapsed && "px-2",
           )}
         >

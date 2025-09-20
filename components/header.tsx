@@ -45,7 +45,7 @@ export function Header({ title, userName }: HeaderProps) {
         </div>
 
         {/* Notifications */}
-        <Button variant="ghost" size="sm" className="relative">
+        <Button variant="ghost" size="sm" className="relative cursor-pointer hover:bg-slate-100 hover:dark:bg-slate-800 transition-colors duration-200">
           <Bell className="h-4 w-4" />
           <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground">
             3
@@ -55,7 +55,7 @@ export function Header({ title, userName }: HeaderProps) {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="flex items-center gap-2 cursor-pointer hover:bg-slate-100 hover:dark:bg-slate-800 transition-colors duration-200">
               <User className="h-4 w-4" />
               <span className="hidden md:inline">{displayName}</span>
             </Button>
