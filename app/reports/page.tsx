@@ -140,32 +140,50 @@ export default function ReportsPage() {
 
   // Date range changes handled by ReportsFilterBar
 
-  const handleDownloadReport = (format: "pdf" | "excel") => {
-    toast({
-      title: "Report Download Started",
-      description: `Generating ${format.toUpperCase()} report...`,
-    })
-    
-    // Create download link and trigger download
-    const downloadUrl = format === "excel" 
-      ? "/api/reports/template" 
-      : "/api/reports/sample-pdf"
-    
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = format === "excel" 
-      ? "manufacturing_reports_template.xlsx"
-      : "manufacturing_reports_sample.pdf"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    setTimeout(() => {
+  const handleDownloadReport = async (format: "pdf" | "excel") => {
+    try {
+      toast({
+        title: "Report Download Started",
+        description: `Generating ${format.toUpperCase()} report...`,
+      })
+
+      const downloadUrl = format === "excel"
+        ? "/api/reports/template"
+        : "/api/reports/sample-pdf"
+
+      const res = await fetch(downloadUrl)
+      if (!res.ok) throw new Error(`Download failed (${res.status})`)
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+
+      const disposition = res.headers.get('content-disposition') || ''
+      const match = disposition.match(/filename="?([^";]+)"?/i)
+      const fallbackName = format === 'excel'
+        ? 'manufacturing_reports_template.xlsx'
+        : 'manufacturing_reports_sample.pdf'
+      const filename = match?.[1] || fallbackName
+
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+
       toast({
         title: "Report Ready",
         description: `Your ${format.toUpperCase()} report has been downloaded.`,
       })
-    }, 1000)
+    } catch (err: any) {
+      console.error('Download error:', err)
+      toast({
+        title: "Download failed",
+        description: err?.message || `Could not download ${format.toUpperCase()} report`,
+        variant: "destructive",
+      })
+    }
   }
 
   const handleFileUpload = async (file: File) => {
@@ -359,7 +377,7 @@ export default function ReportsPage() {
                       <Button
                         variant="default"
                         onClick={() => handleDownloadReport("excel")}
-                        className="justify-start bg-yellow-500 text-black hover:bg-yellow-400"
+                        className="justify-start bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow"
                         size="sm"
                       >
                         <FileText className="mr-2 h-4 w-4" />
@@ -368,7 +386,7 @@ export default function ReportsPage() {
                       <Button
                         variant="default"
                         onClick={() => handleDownloadReport("pdf")}
-                        className="justify-start bg-yellow-500 text-black hover:bg-yellow-400"
+                        className="justify-start bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow"
                         size="sm"
                       >
                         <FileText className="mr-2 h-4 w-4" />

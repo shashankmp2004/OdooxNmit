@@ -116,7 +116,7 @@ export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
         {filteredNavigation.map((item) => {
           const isActive = pathname === item.href
           return (
-            <Link key={item.name} href={item.href}>
+            <Link key={item.name} href={item.href} className="no-underline">
               <Button
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
@@ -144,7 +144,7 @@ export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
                 </p>
               )}
             </div>
-            <Link href="/admin">
+            <Link href="/admin" className="no-underline">
               <Button
                 variant="ghost"
                 className={cn(
@@ -162,7 +162,7 @@ export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
 
       {/* Settings and Logout */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
-        <Link href="/settings">
+  <Link href="/settings" className="no-underline">
           <Button
             variant="ghost"
             className={cn(

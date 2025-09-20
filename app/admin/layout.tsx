@@ -4,6 +4,9 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Sidebar } from "@/components/admin/admin-sidebar"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Home } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -59,6 +62,19 @@ export default function AdminLayout({
     <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-auto">
+        {/* Admin top bar with Home link to main dashboard */}
+        <div className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard" className="no-underline">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Home className="h-4 w-4" />
+                  <span className="hidden sm:inline">Home</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
         <div className="container mx-auto p-6">
           {children}
         </div>

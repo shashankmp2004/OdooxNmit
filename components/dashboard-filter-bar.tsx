@@ -60,54 +60,54 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
         }}
       />
 
-      <div className="hidden md:flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-background border-input"
-          onClick={() => {
+      <div className="hidden md:flex items-center gap-3">
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
             const today = new Date()
             const from = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
             const r = { from, to: today }
             setRange(r)
             onDateRangeChange?.(from, today)
           }}
+          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
         >
           7d
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-background border-input"
-          onClick={() => {
+        </a>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
             const today = new Date()
             const from = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
             const r = { from, to: today }
             setRange(r)
             onDateRangeChange?.(from, today)
           }}
+          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
         >
           30d
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-background border-input"
-          onClick={() => {
+        </a>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
             const r = { from: undefined, to: undefined }
             setRange(r)
             onDateRangeChange?.(undefined, undefined)
           }}
+          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
         >
           Clear
-        </Button>
+        </a>
       </div>
     </>
   )
 
   const right = (
     <>
-      <Button variant="outline" className="h-10 bg-background border-input">
+      <Button variant="default" className="h-10 bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow">
         <Download className="mr-2 h-4 w-4" />
         Export
       </Button>

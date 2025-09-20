@@ -1,8 +1,7 @@
 "use client"
 
-import { Search, User, Settings, Shield } from "lucide-react"
+import { User, Settings, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,11 +36,6 @@ export function Header({ title, userName }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-3 flex-wrap justify-end">
-        {/* Search */}
-        <div className="relative w-64 max-w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search..." className="pl-10 bg-background border-input" />
-        </div>
 
         {/* Admin Portal Access */}
         {isAdmin && (

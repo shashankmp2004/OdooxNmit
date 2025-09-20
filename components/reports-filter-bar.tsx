@@ -34,49 +34,49 @@ export function ReportsFilterBar({
 
   const left = (
     <>
-      <div className="hidden md:flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-background border-input"
-          onClick={() => {
+      <div className="hidden md:flex items-center gap-3">
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
             const to = new Date()
             const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000)
             const r = { from, to }
             setRange(r)
             onChange(r)
           }}
+          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
         >
           Last 7 days
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-background border-input"
-          onClick={() => {
+        </a>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
             const to = new Date()
             const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000)
             const r = { from, to }
             setRange(r)
             onChange(r)
           }}
+          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
         >
           Last 30 days
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 bg-background border-input"
-          onClick={() => {
+        </a>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
             const to = new Date()
             const from = new Date(to.getTime() - 90 * 24 * 60 * 60 * 1000)
             const r = { from, to }
             setRange(r)
             onChange(r)
           }}
+          className="text-sm text-foreground/80 hover:text-foreground transition-colors"
         >
           Last 90 days
-        </Button>
+        </a>
       </div>
 
       <DateRangePicker
@@ -122,28 +122,52 @@ export function ReportsFilterBar({
     <>
       <Button
         variant="default"
-        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400"
-        onClick={() => {
-          const a = document.createElement("a")
-          a.href = "/api/reports/template"
-          a.download = "manufacturing_reports_template.xlsx"
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
+        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow"
+        onClick={async () => {
+          try {
+            const res = await fetch('/api/reports/template')
+            if (!res.ok) throw new Error(`Download failed (${res.status})`)
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const disposition = res.headers.get('content-disposition') || ''
+            const match = disposition.match(/filename=\"?([^\";]+)\"?/i)
+            const filename = match?.[1] || 'manufacturing_reports_template.xlsx'
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            URL.revokeObjectURL(url)
+          } catch (e) {
+            console.error(e)
+          }
         }}
       >
         <Download className="mr-2 h-4 w-4" /> Excel
       </Button>
       <Button
         variant="default"
-        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400"
-        onClick={() => {
-          const a = document.createElement("a")
-          a.href = "/api/reports/sample-pdf"
-          a.download = "manufacturing_reports_sample.pdf"
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
+        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow"
+        onClick={async () => {
+          try {
+            const res = await fetch('/api/reports/sample-pdf')
+            if (!res.ok) throw new Error(`Download failed (${res.status})`)
+            const blob = await res.blob()
+            const url = URL.createObjectURL(blob)
+            const disposition = res.headers.get('content-disposition') || ''
+            const match = disposition.match(/filename=\"?([^\";]+)\"?/i)
+            const filename = match?.[1] || 'manufacturing_reports_sample.pdf'
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            URL.revokeObjectURL(url)
+          } catch (e) {
+            console.error(e)
+          }
         }}
       >
         <Download className="mr-2 h-4 w-4" /> PDF

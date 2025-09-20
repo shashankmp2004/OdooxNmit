@@ -452,9 +452,10 @@ export default function AdminBOMPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => removeBOMItem(index)}
-                        className="h-8"
+                        className="h-8 group"
+                        aria-label="Remove item"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3 transition-transform duration-200 group-hover:-rotate-12" />
                       </Button>
                     </div>
                   ))}
@@ -557,8 +558,10 @@ export default function AdminBOMPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteBOM(bom.id)}
+                        className="group"
+                        aria-label="Delete BOM"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 transition-transform duration-200 group-hover:-rotate-12" />
                       </Button>
                     </div>
                   </TableCell>
