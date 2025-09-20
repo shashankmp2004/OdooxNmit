@@ -7,7 +7,280 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Updated enums to match specifications
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id                          String               @id @default(uuid())
+  fullName                    String
+  email                       String               @unique
+  passwordHash                String?
+  role                        UserRole             @default(operator)
+  createdAt                   DateTime             @default(now())
+  name                        String?
+  avatarUrl                   String?
+  emailVerified               DateTime?
+  image                       String?
+  updatedAt                   DateTime             @updatedAt
+  accounts                    Account[]
+  comments                    Comment[]
+  sessions                    Session[]
+  assignedManufacturingOrders ManufacturingOrder[] @relation("AssigneeUser")
+  workOrderLogs               WorkOrderLog[]
+  legacyAssignedWorkOrders    WorkOrder[]          @relation("LegacyAssignedTo")
+  assignedWorkOrders          WorkOrder[]          @relation("OperatorUser")
+
+  @@map("users")
+}
+
+model Product {
+  id                  String               @id @default(uuid())
+  name                String
+  sku                 String               @unique
+  description         String?
+  productType         ProductType
+  currentStock        Int                  @default(0)
+  unitOfMeasure       String
+  updatedAt           DateTime             @default(now()) @updatedAt
+  category            String?
+  price               Float?
+  minStockAlert       Int?
+  bomLink             String?
+  isFinished          Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  bomItems            BOMItem[]            @relation("BOMItemComponent")
+  stockEntries        StockEntry[]
+  bomComponents       BOMComponent[]       @relation("ComponentProduct")
+  materialComponents  BOMComponent[]       @relation("MaterialProduct")
+  boms                BOM?
+  manufacturingOrders ManufacturingOrder[]
+  stockLedgerEntries  StockLedger[]
+
+  @@map("products")
+}
+
+model WorkCenter {
+  id            String           @id @default(uuid())
+  name          String
+  costPerHour   Decimal?         @db.Decimal(10, 2)
+  status        WorkCenterStatus @default(active)
+  description   String?
+  capacity      Int?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  bomOperations BOMOperation[]
+  workOrders    WorkOrder[]      @relation("WorkCenterWorkOrders")
+
+  @@map("work_centers")
+}
+
+model BOM {
+  id                  String               @id @default(uuid())
+  productId           String               @unique
+  name                String
+  description         String?
+  createdAt           DateTime             @default(now())
+  version             String               @default("v1.0")
+  isActive            Boolean              @default(true)
+  updatedAt           DateTime             @updatedAt
+  items               BOMItem[]
+  bomComponents       BOMComponent[]
+  bomOperations       BOMOperation[]
+  product             Product              @relation(fields: [productId], references: [id])
+  manufacturingOrders ManufacturingOrder[]
+
+  @@map("boms")
+}
+
+model BOMComponent {
+  id                 String   @id @default(uuid())
+  bomId              String
+  componentProductId String
+  quantity           Decimal  @db.Decimal(10, 2)
+  materialId         String?
+  qtyPerUnit         Float?
+  unit               String?
+  cost               Float?
+  createdAt          DateTime @default(now())
+  bom                BOM      @relation(fields: [bomId], references: [id])
+  componentProduct   Product  @relation("ComponentProduct", fields: [componentProductId], references: [id])
+  material           Product? @relation("MaterialProduct", fields: [materialId], references: [id])
+
+  @@map("bom_components")
+}
+
+model BOMOperation {
+  id                       String     @id @default(uuid())
+  bomId                    String
+  workCenterId             String
+  operationName            String
+  sequence                 Int
+  estimatedDurationMinutes Int
+  bom                      BOM        @relation(fields: [bomId], references: [id])
+  workCenter               WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@map("bom_operations")
+}
+
+model ManufacturingOrder {
+  id                 String        @id @default(uuid())
+  productId          String
+  bomId              String?
+  quantityToProduce  Int
+  status             OrderStatus   @default(Planned)
+  assigneeId         String?
+  scheduledStartDate DateTime
+  actualStartDate    DateTime?
+  completionDate     DateTime?
+  createdAt          DateTime      @default(now())
+  orderNo            String?       @unique
+  name               String?
+  quantity           Int?
+  state              OrderStatus?  @default(Planned)
+  deadline           DateTime?
+  bomSnapshot        Json?
+  createdById        String?
+  updatedAt          DateTime      @updatedAt
+  assignee           User?         @relation("AssigneeUser", fields: [assigneeId], references: [id])
+  bom                BOM?          @relation(fields: [bomId], references: [id])
+  product            Product       @relation(fields: [productId], references: [id])
+  stockLedger        StockLedger[]
+  workOrders         WorkOrder[]
+
+  @@map("manufacturing_orders")
+}
+
+model WorkOrder {
+  id                       String             @id @default(uuid())
+  moId                     String
+  workCenterId             String?
+  operatorId               String?
+  operationName            String
+  status                   WorkOrderStatus    @default(Pending)
+  sequence                 Int
+  estimatedDurationMinutes Int?
+  actualStartTime          DateTime?
+  totalTimeSpentMinutes    Int                @default(0)
+  title                    String?
+  taskName                 String?
+  description              String?
+  assignedToId             String?
+  machineWorkCenter        String?
+  priority                 String?            @default("MEDIUM")
+  progress                 Int                @default(0)
+  estimatedTime            Float?
+  actualTime               Float?
+  startTime                DateTime?
+  endTime                  DateTime?
+  durationMin              Int?
+  notes                    String?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  comments                 Comment[]
+  workOrderLogs            WorkOrderLog[]
+  assignedTo               User?              @relation("LegacyAssignedTo", fields: [assignedToId], references: [id])
+  manufacturingOrder       ManufacturingOrder @relation(fields: [moId], references: [id])
+  operator                 User?              @relation("OperatorUser", fields: [operatorId], references: [id])
+  workCenter               WorkCenter?        @relation("WorkCenterWorkOrders", fields: [workCenterId], references: [id])
+
+  @@map("work_orders")
+}
+
+model WorkOrderLog {
+  id        String    @id @default(uuid())
+  woId      String
+  userId    String
+  logType   LogType
+  details   String?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  workOrder WorkOrder @relation(fields: [woId], references: [id])
+
+  @@map("work_order_logs")
+}
+
+model StockLedger {
+  id              String              @id @default(uuid())
+  productId       String
+  quantityChange  Int
+  newStockLevel   Int
+  transactionType TransactionType
+  referenceMoId   String?
+  createdAt       DateTime            @default(now())
+  product         Product             @relation(fields: [productId], references: [id])
+  referenceMo     ManufacturingOrder? @relation(fields: [referenceMoId], references: [id])
+
+  @@map("stock_ledger")
+}
+
+model BOMItem {
+  id          String   @id @default(uuid())
+  bomId       String
+  componentId String
+  quantity    Float
+  unit        String   @default("pcs")
+  notes       String?
+  createdAt   DateTime @default(now())
+  bom         BOM      @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  component   Product  @relation("BOMItemComponent", fields: [componentId], references: [id])
+}
+
+model Comment {
+  id          String    @id @default(uuid())
+  workOrderId String
+  authorId    String?
+  content     String
+  createdAt   DateTime  @default(now())
+  author      User?     @relation(fields: [authorId], references: [id])
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+}
+
+model StockEntry {
+  id           String   @id @default(uuid())
+  productId    String
+  type         String?
+  quantity     Float?
+  change       Float
+  reference    String?
+  notes        String?
+  sourceType   String?
+  sourceId     String?
+  balanceAfter Float?
+  createdAt    DateTime @default(now())
+  product      Product  @relation(fields: [productId], references: [id])
+}
+
 enum UserRole {
   manager
   operator
@@ -52,328 +325,4 @@ enum TransactionType {
   production
   initial_stock
   adjustment
-}
-
-// NextAuth required models (preserved)
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-// 1. User and Access Control Tables
-model User {
-  id           String   @id @default(uuid())
-  fullName     String // Updated field name to match specs
-  email        String   @unique
-  passwordHash String? // Updated field name to match specs
-  role         UserRole @default(operator)
-  createdAt    DateTime @default(now())
-
-  // NextAuth compatibility fields (preserved)
-  name          String?
-  avatarUrl     String?
-  emailVerified DateTime?
-  image         String?
-  updatedAt     DateTime  @updatedAt
-
-  // Relationships
-  accounts                    Account[]
-  sessions                    Session[]
-  assignedManufacturingOrders ManufacturingOrder[] @relation("AssigneeUser")
-  assignedWorkOrders          WorkOrder[]          @relation("OperatorUser")
-  workOrderLogs               WorkOrderLog[]
-
-  // Legacy relationships (preserved)
-  legacyAssignedWorkOrders WorkOrder[] @relation("LegacyAssignedTo")
-  comments                 Comment[]
-
-  @@map("users")
-}
-
-// 2. Core Manufacturing Tables
-model Product {
-  id            String      @id @default(uuid())
-  name          String
-  sku           String      @unique
-  description   String?
-  productType   ProductType
-  currentStock  Int         @default(0)
-  unitOfMeasure String
-  updatedAt     DateTime    @default(now()) @updatedAt
-
-  // Legacy fields for compatibility
-  category      String?
-  price         Float?
-  minStockAlert Int?
-  bomLink       String?
-  isFinished    Boolean  @default(false)
-  createdAt     DateTime @default(now())
-
-  // Relationships
-  boms                BOM[]
-  bomComponents       BOMComponent[]       @relation("ComponentProduct")
-  manufacturingOrders ManufacturingOrder[]
-  stockLedgerEntries  StockLedger[]
-
-  // Legacy relationships (preserved)
-  stockEntries       StockEntry[]
-  bomItems           BOMItem[]      @relation("BOMItemComponent")
-  materialComponents BOMComponent[] @relation("MaterialProduct")
-
-  @@map("products")
-}
-
-model WorkCenter {
-  id          String           @id @default(uuid())
-  name        String
-  costPerHour Decimal?         @db.Decimal(10, 2)
-  status      WorkCenterStatus @default(active)
-
-  // Legacy fields for compatibility
-  description String?
-  capacity    Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relationships
-  bomOperations BOMOperation[]
-  workOrders    WorkOrder[]    @relation("WorkCenterWorkOrders")
-
-  @@map("work_centers")
-}
-
-model BOM {
-  id          String   @id @default(uuid())
-  productId   String   @unique // Only one BOM per finished good as per specs
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-
-  // Legacy fields for compatibility
-  version   String   @default("v1.0")
-  isActive  Boolean  @default(true)
-  updatedAt DateTime @updatedAt
-
-  // Relationships
-  product             Product              @relation(fields: [productId], references: [id])
-  bomComponents       BOMComponent[]
-  bomOperations       BOMOperation[]
-  manufacturingOrders ManufacturingOrder[]
-
-  // Legacy relationships (preserved)
-  items BOMItem[]
-
-  @@map("boms")
-}
-
-model BOMComponent {
-  id                 String  @id @default(uuid())
-  bomId              String
-  componentProductId String // Updated field name to match specs
-  quantity           Decimal @db.Decimal(10, 2)
-
-  // Legacy fields for compatibility
-  materialId String? // Keep for backward compatibility
-  qtyPerUnit Float? // Keep for backward compatibility
-  unit       String?
-  cost       Float?
-  createdAt  DateTime @default(now())
-
-  // Primary relationships (new structure)
-  bom              BOM     @relation(fields: [bomId], references: [id])
-  componentProduct Product @relation("ComponentProduct", fields: [componentProductId], references: [id])
-
-  // Legacy relationships (preserved) - only if materialId is provided
-  material Product? @relation("MaterialProduct", fields: [materialId], references: [id])
-
-  @@map("bom_components")
-}
-
-model BOMOperation {
-  id                       String @id @default(uuid())
-  bomId                    String
-  workCenterId             String
-  operationName            String
-  sequence                 Int
-  estimatedDurationMinutes Int
-
-  // Relationships
-  bom        BOM        @relation(fields: [bomId], references: [id])
-  workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
-
-  @@map("bom_operations")
-}
-
-// 3. Transactional and Tracking Tables
-model ManufacturingOrder {
-  id                 String      @id @default(uuid())
-  productId          String
-  bomId              String?
-  quantityToProduce  Int
-  status             OrderStatus @default(Planned)
-  assigneeId         String?
-  scheduledStartDate DateTime
-  actualStartDate    DateTime?
-  completionDate     DateTime?
-  createdAt          DateTime    @default(now())
-
-  // Legacy fields for compatibility
-  orderNo     String?      @unique
-  name        String?
-  quantity    Int?
-  state       OrderStatus? @default(Planned)
-  deadline    DateTime?
-  bomSnapshot Json?
-  createdById String?
-  updatedAt   DateTime     @updatedAt
-
-  // Relationships
-  product     Product       @relation(fields: [productId], references: [id])
-  bom         BOM?          @relation(fields: [bomId], references: [id])
-  assignee    User?         @relation("AssigneeUser", fields: [assigneeId], references: [id])
-  workOrders  WorkOrder[]
-  stockLedger StockLedger[]
-
-  @@map("manufacturing_orders")
-}
-
-model WorkOrder {
-  id                       String          @id @default(uuid())
-  moId                     String
-  workCenterId             String?
-  operatorId               String?
-  operationName            String
-  status                   WorkOrderStatus @default(Pending)
-  sequence                 Int
-  estimatedDurationMinutes Int?
-  actualStartTime          DateTime?
-  totalTimeSpentMinutes    Int             @default(0)
-
-  // Legacy fields for compatibility
-  title             String?
-  taskName          String?
-  description       String?
-  assignedToId      String?
-  machineWorkCenter String?
-  priority          String?   @default("MEDIUM")
-  progress          Int       @default(0)
-  estimatedTime     Float?
-  actualTime        Float?
-  startTime         DateTime?
-  endTime           DateTime?
-  durationMin       Int?
-  notes             String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  // Relationships
-  manufacturingOrder ManufacturingOrder @relation(fields: [moId], references: [id])
-  workCenter         WorkCenter?        @relation("WorkCenterWorkOrders", fields: [workCenterId], references: [id])
-  operator           User?              @relation("OperatorUser", fields: [operatorId], references: [id])
-  workOrderLogs      WorkOrderLog[]
-
-  // Legacy relationships (preserved)
-  assignedTo User?     @relation("LegacyAssignedTo", fields: [assignedToId], references: [id])
-  comments   Comment[]
-
-  @@map("work_orders")
-}
-
-model WorkOrderLog {
-  id        String   @id @default(uuid())
-  woId      String
-  userId    String
-  logType   LogType
-  details   String?
-  createdAt DateTime @default(now())
-
-  // Relationships
-  workOrder WorkOrder @relation(fields: [woId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
-
-  @@map("work_order_logs")
-}
-
-model StockLedger {
-  id              String          @id @default(uuid())
-  productId       String
-  quantityChange  Int // Negative for consumption, positive for production
-  newStockLevel   Int
-  transactionType TransactionType
-  referenceMoId   String?
-  createdAt       DateTime        @default(now())
-
-  // Relationships
-  product     Product             @relation(fields: [productId], references: [id])
-  referenceMo ManufacturingOrder? @relation(fields: [referenceMoId], references: [id])
-
-  @@map("stock_ledger")
-}
-
-// Legacy models (preserved for compatibility)
-model BOMItem {
-  id          String   @id @default(uuid())
-  bom         BOM      @relation(fields: [bomId], references: [id], onDelete: Cascade)
-  bomId       String
-  component   Product  @relation("BOMItemComponent", fields: [componentId], references: [id])
-  componentId String
-  quantity    Float
-  unit        String   @default("pcs")
-  notes       String?
-  createdAt   DateTime @default(now())
-}
-
-model Comment {
-  id          String    @id @default(uuid())
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
-  workOrderId String
-  author      User?     @relation(fields: [authorId], references: [id])
-  authorId    String?
-  content     String
-  createdAt   DateTime  @default(now())
-}
-
-model StockEntry {
-  id           String   @id @default(uuid())
-  product      Product  @relation(fields: [productId], references: [id])
-  productId    String
-  type         String? // Keep for compatibility
-  quantity     Float?
-  change       Float
-  reference    String?
-  notes        String?
-  sourceType   String?
-  sourceId     String?
-  balanceAfter Float?
-  createdAt    DateTime @default(now())
 }

@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "prisma generate && prisma migrate deploy && npm run db:seed:prod && next build",
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
     "db:seed": "npx ts-node prisma/seed.ts",
+    "db:seed:prod": "npx prisma db seed",
     "db:migrate": "npx prisma migrate dev",
+    "db:migrate:deploy": "npx prisma migrate deploy",
     "db:generate": "npx prisma generate",
-    "postinstall": "npx prisma generate"
+    "postinstall": "npx prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy && prisma db seed && next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
