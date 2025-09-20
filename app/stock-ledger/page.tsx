@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { StockLedgerTable } from "@/components/stock-ledger-table"
@@ -16,13 +16,46 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Plus, Download, AlertTriangle, Package, TrendingUp, TrendingDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
+interface StockStats {
+  totalProducts: number
+  lowStockItems: number
+  stockInToday: number
+  stockOutToday: number
+}
+
 export default function StockLedgerPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [addProductDialogOpen, setAddProductDialogOpen] = useState(false)
+  const [stockStats, setStockStats] = useState<StockStats>({
+    totalProducts: 0,
+    lowStockItems: 0,
+    stockInToday: 0,
+    stockOutToday: 0
+  })
+  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { data: session } = useAuth()
+
+  // Fetch stock statistics
+  useEffect(() => {
+    const fetchStockStats = async () => {
+      try {
+        const response = await fetch("/api/stock/stats")
+        if (response.ok) {
+          const stats = await response.json()
+          setStockStats(stats)
+        }
+      } catch (error) {
+        console.error("Error fetching stock stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStockStats()
+  }, [])
 
   const handleAddProduct = (data: {
     name: string
@@ -48,11 +81,11 @@ export default function StockLedgerPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={["Inventory Manager", "Manager", "Admin"]}>
+    <ProtectedRoute allowedRoles={["INVENTORY", "MANAGER", "ADMIN"]}>
       <div className="flex h-screen bg-background">
-        <Sidebar userRole={user?.role} />
+        <Sidebar userRole={session?.user?.role} />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Stock Ledger" userName={`${user?.name} (${user?.role})`} />
+          <Header title="Stock Ledger" userName={`${session?.user?.name} (${session?.user?.role})`} />
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Stock Overview Cards */}
@@ -63,8 +96,14 @@ export default function StockLedgerPage() {
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground">247</div>
-                    <p className="text-xs text-green-400 mt-1">+12 this month</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground">{stockStats.totalProducts}</div>
+                        <p className="text-xs text-green-400 mt-1">Total products in inventory</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -74,8 +113,14 @@ export default function StockLedgerPage() {
                     <AlertTriangle className="h-4 w-4 text-red-400" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-400">8</div>
-                    <p className="text-xs text-red-400 mt-1">Requires attention</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-red-400">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-red-400">{stockStats.lowStockItems}</div>
+                        <p className="text-xs text-red-400 mt-1">Requires attention</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -85,8 +130,14 @@ export default function StockLedgerPage() {
                     <TrendingUp className="h-4 w-4 text-green-400" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-400">1,245</div>
-                    <p className="text-xs text-muted-foreground mt-1">Units received</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-green-400">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-green-400">{stockStats.stockInToday.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Units received</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -96,8 +147,14 @@ export default function StockLedgerPage() {
                     <TrendingDown className="h-4 w-4 text-red-400" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-400">892</div>
-                    <p className="text-xs text-muted-foreground mt-1">Units consumed</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-red-400">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-red-400">{stockStats.stockOutToday.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Units consumed</p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -165,7 +222,6 @@ export default function StockLedgerPage() {
                 <StockLedgerTable
                   searchQuery={searchQuery}
                   categoryFilter={categoryFilter}
-                  showLowStockOnly={showLowStockOnly}
                 />
               </div>
             </div>

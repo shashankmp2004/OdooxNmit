@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { BOMComponentRow } from "@/components/bom-component-row"
@@ -25,41 +25,18 @@ interface BOMComponent {
   cost?: number
 }
 
-const availableProducts = [
-  "Steel Frame Assembly",
-  "Hydraulic Pump Unit",
-  "Control Panel Board",
-  "Motor Housing",
-  "Bearing Assembly",
-  "Valve Assembly",
-  "Gear Box Unit",
-]
+interface Product {
+  id: string
+  name: string
+  sku: string
+  isFinished: boolean
+}
 
-const availableComponents = [
-  "Steel Rod 10mm",
-  "Steel Rod 12mm",
-  "Hydraulic Seal Kit",
-  "Motor Assembly",
-  "Welding Electrodes",
-  "Control Panel",
-  "Bearing Set",
-  "Hydraulic Cylinder",
-  "Pressure Valve",
-  "Electrical Wiring",
-  "Mounting Brackets",
-  "Fasteners Kit",
-]
-
-const availableWorkOrders = [
-  "WO-2024-101",
-  "WO-2024-102",
-  "WO-2024-103",
-  "WO-2024-104",
-  "WO-2024-105",
-  "WO-2024-106",
-  "WO-2024-107",
-  "WO-2024-108",
-]
+interface WorkOrder {
+  id: string
+  orderNo: string
+  name: string
+}
 
 export default function BOMPage() {
   const [finishedProduct, setFinishedProduct] = useState("")
@@ -69,8 +46,57 @@ export default function BOMPage() {
   const [estimatedCost, setEstimatedCost] = useState<number>(0)
   const [description, setDescription] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // API data
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([])
+  const [availableComponents, setAvailableComponents] = useState<Product[]>([])
+  const [availableWorkOrders, setAvailableWorkOrders] = useState<WorkOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { data: session } = useAuth()
+
+  // Fetch data from APIs
+  useEffect(() => {
+    async function fetchBOMData() {
+      try {
+        setLoading(true)
+        const [productsResponse, workOrdersResponse] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/work-orders')
+        ])
+
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json()
+          const products = productsData.products || productsData || []
+          
+          // Separate finished products from raw materials/components
+          const finishedProducts = products.filter((p: Product) => p.isFinished)
+          const rawMaterials = products.filter((p: Product) => !p.isFinished)
+          
+          setAvailableProducts(finishedProducts)
+          setAvailableComponents(rawMaterials)
+        }
+
+        if (workOrdersResponse.ok) {
+          const workOrdersData = await workOrdersResponse.json()
+          const workOrders = workOrdersData.workOrders || workOrdersData || []
+          setAvailableWorkOrders(workOrders)
+        }
+      } catch (err) {
+        console.error('Error loading BOM data:', err)
+        toast({
+          title: "Error",
+          description: "Failed to load BOM data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBOMData()
+  }, [])
 
   const addComponent = () => {
     const newComponent: BOMComponent = {
@@ -155,11 +181,11 @@ export default function BOMPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={["Admin", "Manager"]}>
+    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
       <div className="flex h-screen bg-background">
-        <Sidebar userRole={user?.role} />
+        <Sidebar userRole={session?.user?.role} />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header title="BOM Management" userName={`${user?.name} (${user?.role})`} />
+          <Header title="BOM Management" userName={`${session?.user?.name} (${session?.user?.role})`} />
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -180,11 +206,17 @@ export default function BOMPage() {
                               <SelectValue placeholder="Select finished product" />
                             </SelectTrigger>
                             <SelectContent>
-                              {availableProducts.map((product) => (
-                                <SelectItem key={product} value={product}>
-                                  {product}
-                                </SelectItem>
-                              ))}
+                              {loading ? (
+                                <SelectItem value="loading" disabled>Loading products...</SelectItem>
+                              ) : availableProducts.length > 0 ? (
+                                availableProducts.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} ({product.sku})
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="none" disabled>No finished products available</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -259,31 +291,40 @@ export default function BOMPage() {
                             <SelectValue placeholder="Select work order to attach" />
                           </SelectTrigger>
                           <SelectContent>
-                            {availableWorkOrders
-                              .filter((wo) => !selectedWorkOrders.includes(wo))
-                              .map((workOrder) => (
-                                <SelectItem key={workOrder} value={workOrder}>
-                                  {workOrder}
-                                </SelectItem>
-                              ))}
+                            {loading ? (
+                              <SelectItem value="loading" disabled>Loading work orders...</SelectItem>
+                            ) : availableWorkOrders.length > 0 ? (
+                              availableWorkOrders
+                                .filter((wo) => !selectedWorkOrders.includes(wo.id))
+                                .map((workOrder) => (
+                                  <SelectItem key={workOrder.id} value={workOrder.id}>
+                                    {workOrder.orderNo} - {workOrder.name}
+                                  </SelectItem>
+                                ))
+                            ) : (
+                              <SelectItem value="none" disabled>No work orders available</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
 
                         {selectedWorkOrders.length > 0 && (
                           <div className="flex flex-wrap gap-2">
-                            {selectedWorkOrders.map((workOrder) => (
-                              <Badge key={workOrder} variant="secondary" className="flex items-center gap-1">
-                                {workOrder}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-4 w-4 p-0 hover:bg-transparent"
-                                  onClick={() => removeWorkOrder(workOrder)}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </Badge>
-                            ))}
+                            {selectedWorkOrders.map((workOrderId) => {
+                              const workOrder = availableWorkOrders.find(wo => wo.id === workOrderId)
+                              return (
+                                <Badge key={workOrderId} variant="secondary" className="flex items-center gap-1">
+                                  {workOrder ? `${workOrder.orderNo} - ${workOrder.name}` : workOrderId}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-4 w-4 p-0 hover:bg-transparent"
+                                    onClick={() => removeWorkOrder(workOrderId)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </Badge>
+                              )
+                            })}
                           </div>
                         )}
                       </div>

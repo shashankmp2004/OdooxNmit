@@ -14,7 +14,7 @@ export interface AuthenticatedRequest extends NextApiRequest {
 }
 
 export function requireAuth(
-  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void>
+  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<any>
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     const session = await getServerSession(req, res, authOptions);
@@ -37,7 +37,7 @@ export function requireAuth(
 
 export function requireRole(
   roles: UserRole | UserRole[],
-  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void>
+  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<any>
 ) {
   return requireAuth(async (req: AuthenticatedRequest, res: NextApiResponse) => {
     const userRole = req.user.role;

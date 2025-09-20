@@ -25,31 +25,31 @@ const navigation = [
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["Manager", "Admin"],
+    roles: ["MANAGER", "ADMIN"],
   },
   {
     name: "Work Orders",
     href: "/work-orders",
     icon: ClipboardList,
-    roles: ["Operator", "Manager", "Admin"],
+    roles: ["OPERATOR", "MANAGER", "ADMIN"],
   },
   {
     name: "Stock Ledger",
     href: "/stock-ledger",
     icon: Warehouse,
-    roles: ["Inventory Manager", "Manager", "Admin"],
+    roles: ["INVENTORY", "MANAGER", "ADMIN"],
   },
   {
     name: "BOM Management",
     href: "/bom",
     icon: FileText,
-    roles: ["Admin", "Manager"],
+    roles: ["ADMIN", "MANAGER"],
   },
   {
     name: "Reports",
     href: "/reports",
     icon: BarChart3,
-    roles: ["Manager", "Admin"],
+    roles: ["MANAGER", "ADMIN"],
   },
 ]
 
@@ -57,17 +57,19 @@ interface SidebarProps {
   userRole?: string
 }
 
-export function Sidebar({ userRole = "Manager" }: SidebarProps) {
+export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { logout } = useAuth()
+  const { data: session } = useAuth()
 
-  const filteredNavigation = navigation.filter((item) => item.roles.includes(userRole))
+  // Use the actual user role from session if available
+  const currentRole = userRole || session?.user?.role || "MANAGER"
+  
+  const filteredNavigation = navigation.filter((item) => item.roles.includes(currentRole))
 
   const handleLogout = () => {
-    logout()
-    router.push("/landing")
+    router.push("/api/auth/signout")
   }
 
   return (
@@ -99,7 +101,7 @@ export function Sidebar({ userRole = "Manager" }: SidebarProps) {
       {!collapsed && (
         <div className="p-4 border-b border-sidebar-border">
           <Badge variant="secondary" className="bg-sidebar-accent text-sidebar-accent-foreground">
-            {userRole}
+            {currentRole}
           </Badge>
         </div>
       )}

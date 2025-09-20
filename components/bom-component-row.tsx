@@ -17,7 +17,7 @@ interface BOMComponentRowProps {
   component: BOMComponent
   onUpdate: (id: string, field: keyof BOMComponent, value: string | number) => void
   onRemove: (id: string) => void
-  availableComponents: string[]
+  availableComponents: Array<{id: string, name: string, sku: string}>
 }
 
 export function BOMComponentRow({ component, onUpdate, onRemove, availableComponents }: BOMComponentRowProps) {
@@ -30,8 +30,8 @@ export function BOMComponentRow({ component, onUpdate, onRemove, availableCompon
           </SelectTrigger>
           <SelectContent>
             {availableComponents.map((comp) => (
-              <SelectItem key={comp} value={comp}>
-                {comp}
+              <SelectItem key={comp.id} value={comp.name}>
+                {comp.name} ({comp.sku})
               </SelectItem>
             ))}
           </SelectContent>

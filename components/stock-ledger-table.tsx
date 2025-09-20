@@ -1,284 +1,331 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { MoreHorizontal, Edit, Trash2, AlertTriangle, TrendingUp, TrendingDown, Package } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, AlertTriangle, TrendingUp, TrendingDown, Package, Plus } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
-interface StockItem {
+interface StockEntry {
   id: string
+  product: {
+    id: string
+    name: string
+    unit: string
+    category: string
+  }
+  type: "IN" | "OUT"
+  quantity: number
+  reference: string
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface StockItem {
+  productId: string
   productName: string
   category: string
   unit: string
-  openingStock: number
-  stockIn: number
-  stockOut: number
-  closingStock: number
-  minStockAlert: number
+  currentStock: number
+  totalIn: number
+  totalOut: number
   lastUpdated: string
-  bomLink?: string
 }
-
-const mockStockData: StockItem[] = [
-  {
-    id: "PRD-001",
-    productName: "Steel Rod 10mm",
-    category: "Raw Materials",
-    unit: "kg",
-    openingStock: 500,
-    stockIn: 200,
-    stockOut: 150,
-    closingStock: 550,
-    minStockAlert: 100,
-    lastUpdated: "2024-01-20T10:30:00Z",
-    bomLink: "BOM-2024-001",
-  },
-  {
-    id: "PRD-002",
-    productName: "Hydraulic Seal Kit",
-    category: "Components",
-    unit: "pcs",
-    openingStock: 25,
-    stockIn: 10,
-    stockOut: 30,
-    closingStock: 5,
-    minStockAlert: 20,
-    lastUpdated: "2024-01-20T09:15:00Z",
-  },
-  {
-    id: "PRD-003",
-    productName: "Motor Assembly",
-    category: "Assemblies",
-    unit: "pcs",
-    openingStock: 15,
-    stockIn: 5,
-    stockOut: 8,
-    closingStock: 12,
-    minStockAlert: 10,
-    lastUpdated: "2024-01-20T14:45:00Z",
-    bomLink: "BOM-2024-003",
-  },
-  {
-    id: "PRD-004",
-    productName: "Welding Electrodes",
-    category: "Consumables",
-    unit: "kg",
-    openingStock: 50,
-    stockIn: 25,
-    stockOut: 60,
-    closingStock: 15,
-    minStockAlert: 30,
-    lastUpdated: "2024-01-19T16:20:00Z",
-  },
-  {
-    id: "PRD-005",
-    productName: "Control Panel",
-    category: "Finished Goods",
-    unit: "pcs",
-    openingStock: 8,
-    stockIn: 3,
-    stockOut: 2,
-    closingStock: 9,
-    minStockAlert: 5,
-    lastUpdated: "2024-01-20T11:00:00Z",
-  },
-]
 
 interface StockLedgerTableProps {
   searchQuery?: string
   categoryFilter?: string
-  showLowStockOnly?: boolean
+  userRole?: string
 }
 
-export function StockLedgerTable({ searchQuery, categoryFilter, showLowStockOnly }: StockLedgerTableProps) {
-  const [stockData, setStockData] = useState<StockItem[]>(mockStockData)
-  const [editingStock, setEditingStock] = useState<{ id: string; field: string; value: string } | null>(null)
+export function StockLedgerTable({ searchQuery, categoryFilter, userRole = "OPERATOR" }: StockLedgerTableProps) {
+  const [stockEntries, setStockEntries] = useState<StockEntry[]>([])
+  const [stockSummary, setStockSummary] = useState<StockItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useState<"entries" | "summary">("summary")
 
-  const filteredData = stockData.filter((item) => {
+  // Role-based permissions
+  const canEditStock = ["ADMIN", "MANAGER", "INVENTORY"].includes(userRole)
+  const canViewAllStock = ["ADMIN", "MANAGER", "INVENTORY"].includes(userRole)
+
+  // Fetch stock data from API
+  useEffect(() => {
+    async function fetchStockData() {
+      try {
+        setLoading(true)
+        const [entriesResponse, summaryResponse] = await Promise.all([
+          fetch('/api/stock'),
+          fetch('/api/stock/summary')
+        ])
+        
+        if (entriesResponse.ok) {
+          const entriesData = await entriesResponse.json()
+          // Ensure data is an array
+          setStockEntries(Array.isArray(entriesData) ? entriesData : [])
+        }
+
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json()
+          // Ensure data is an array
+          setStockSummary(Array.isArray(summaryData) ? summaryData : [])
+        } else {
+          // If summary endpoint doesn't exist, calculate from entries
+          const entriesData = await entriesResponse.json()
+          const entriesArray = Array.isArray(entriesData) ? entriesData : []
+          setStockEntries(entriesArray)
+          // Calculate summary from entries
+          const summary = calculateStockSummary(entriesArray)
+          setStockSummary(summary)
+        }
+      } catch (err) {
+        setError('Error loading stock data')
+        console.error('Error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStockData()
+  }, [])
+
+  // Calculate stock summary from entries
+  const calculateStockSummary = (entries: StockEntry[]): StockItem[] => {
+    const productMap = new Map<string, StockItem>()
+
+    entries.forEach(entry => {
+      const existing = productMap.get(entry.product.id)
+      const quantity = entry.type === "IN" ? entry.quantity : -entry.quantity
+
+      if (existing) {
+        existing.currentStock += quantity
+        existing.totalIn += entry.type === "IN" ? entry.quantity : 0
+        existing.totalOut += entry.type === "OUT" ? entry.quantity : 0
+        existing.lastUpdated = entry.createdAt > existing.lastUpdated ? entry.createdAt : existing.lastUpdated
+      } else {
+        productMap.set(entry.product.id, {
+          productId: entry.product.id,
+          productName: entry.product.name,
+          category: entry.product.category,
+          unit: entry.product.unit,
+          currentStock: quantity,
+          totalIn: entry.type === "IN" ? entry.quantity : 0,
+          totalOut: entry.type === "OUT" ? entry.quantity : 0,
+          lastUpdated: entry.createdAt
+        })
+      }
+    })
+
+    return Array.from(productMap.values())
+  }
+
+  const filteredStockSummary = (Array.isArray(stockSummary) ? stockSummary : []).filter((item) => {
     const matchesSearch =
       !searchQuery ||
       item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.id.toLowerCase().includes(searchQuery.toLowerCase())
-
+      item.category.toLowerCase().includes(searchQuery.toLowerCase())
+    
     const matchesCategory = !categoryFilter || categoryFilter === "all" || item.category === categoryFilter
 
-    const matchesLowStock = !showLowStockOnly || item.closingStock <= item.minStockAlert
-
-    return matchesSearch && matchesCategory && matchesLowStock
+    return matchesSearch && matchesCategory
   })
 
-  const getCategoryColor = (category: string) => {
-    const colors = {
-      "Raw Materials": "bg-blue-500/20 text-blue-400 border-blue-500/30",
-      Components: "bg-green-500/20 text-green-400 border-green-500/30",
-      Assemblies: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-      "Finished Goods": "bg-orange-500/20 text-orange-400 border-orange-500/30",
-      Consumables: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-      Tools: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-    }
-    return colors[category as keyof typeof colors] || "bg-muted text-muted-foreground"
+  const filteredStockEntries = (Array.isArray(stockEntries) ? stockEntries : []).filter((entry) => {
+    const matchesSearch =
+      !searchQuery ||
+      entry.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.reference.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesCategory = !categoryFilter || categoryFilter === "all" || entry.product.category === categoryFilter
+
+    return matchesSearch && matchesCategory
+  })
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString()
   }
 
-  const isLowStock = (item: StockItem) => item.closingStock <= item.minStockAlert
-
-  const getStockMovement = (stockIn: number, stockOut: number) => {
-    const net = stockIn - stockOut
-    if (net > 0) return { icon: TrendingUp, color: "text-green-400", value: `+${net}` }
-    if (net < 0) return { icon: TrendingDown, color: "text-red-400", value: net.toString() }
-    return { icon: Package, color: "text-muted-foreground", value: "0" }
+  const getStockStatus = (currentStock: number) => {
+    if (currentStock <= 0) return { status: "Out of Stock", color: "bg-red-100 text-red-800" }
+    if (currentStock < 10) return { status: "Low Stock", color: "bg-yellow-100 text-yellow-800" }
+    return { status: "In Stock", color: "bg-green-100 text-green-800" }
   }
 
-  const handleStockEdit = (id: string, field: string, newValue: string) => {
-    const numValue = Number.parseInt(newValue)
-    if (isNaN(numValue) || numValue < 0) return
-
-    setStockData((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const updated = { ...item, [field]: numValue, lastUpdated: new Date().toISOString() }
-          // Recalculate closing stock if opening, stockIn, or stockOut changed
-          if (field === "openingStock" || field === "stockIn" || field === "stockOut") {
-            updated.closingStock = updated.openingStock + updated.stockIn - updated.stockOut
-          }
-          return updated
-        }
-        return item
-      }),
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-muted-foreground">Loading stock data...</div>
+      </div>
     )
-    setEditingStock(null)
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-red-500">{error}</div>
+      </div>
+    )
+  }
+
+  if ((Array.isArray(stockSummary) ? stockSummary.length : 0) === 0 && (Array.isArray(stockEntries) ? stockEntries.length : 0) === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+        <div className="text-muted-foreground">No stock data found</div>
+        {canEditStock && (
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add First Stock Entry
+          </Button>
+        )}
+      </div>
+    )
   }
 
   return (
-    <div className="rounded-md border border-border bg-card">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-border hover:bg-muted/50">
-            <TableHead className="text-muted-foreground">Product Name</TableHead>
-            <TableHead className="text-muted-foreground">Category</TableHead>
-            <TableHead className="text-muted-foreground">Opening Stock</TableHead>
-            <TableHead className="text-muted-foreground">Stock In</TableHead>
-            <TableHead className="text-muted-foreground">Stock Out</TableHead>
-            <TableHead className="text-muted-foreground">Closing Stock</TableHead>
-            <TableHead className="text-muted-foreground">Movement</TableHead>
-            <TableHead className="text-muted-foreground">Last Updated</TableHead>
-            <TableHead className="text-muted-foreground w-[50px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredData.map((item) => {
-            const movement = getStockMovement(item.stockIn, item.stockOut)
-            const MovementIcon = movement.icon
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div className="flex space-x-2">
+          <Button 
+            variant={view === "summary" ? "default" : "outline"}
+            onClick={() => setView("summary")}
+          >
+            Stock Summary
+          </Button>
+          <Button 
+            variant={view === "entries" ? "default" : "outline"}
+            onClick={() => setView("entries")}
+          >
+            Stock Entries
+          </Button>
+        </div>
+      </div>
 
-            return (
-              <TableRow
-                key={item.id}
-                className={cn("border-border hover:bg-muted/50", isLowStock(item) && "bg-red-500/5")}
-              >
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="font-medium text-foreground flex items-center gap-2">
-                      {item.productName}
-                      {isLowStock(item) && <AlertTriangle className="h-4 w-4 text-red-400" />}
-                    </div>
-                    <div className="text-sm text-muted-foreground font-mono">{item.id}</div>
-                    {item.bomLink && (
-                      <div className="text-xs text-blue-400 hover:underline cursor-pointer">BOM: {item.bomLink}</div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={getCategoryColor(item.category)}>
-                    {item.category}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {editingStock?.id === item.id && editingStock?.field === "openingStock" ? (
-                    <Input
-                      type="number"
-                      defaultValue={item.openingStock}
-                      className="w-20 h-8"
-                      onBlur={(e) => handleStockEdit(item.id, "openingStock", e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleStockEdit(item.id, "openingStock", e.currentTarget.value)
-                        }
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <span
-                      className="cursor-pointer hover:bg-muted px-2 py-1 rounded"
-                      onClick={() =>
-                        setEditingStock({ id: item.id, field: "openingStock", value: item.openingStock.toString() })
-                      }
-                    >
-                      {item.openingStock.toLocaleString()} {item.unit}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span className="text-green-400">
-                    +{item.stockIn.toLocaleString()} {item.unit}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-red-400">
-                    -{item.stockOut.toLocaleString()} {item.unit}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className={cn("font-medium", isLowStock(item) ? "text-red-400" : "text-foreground")}>
-                      {item.closingStock.toLocaleString()} {item.unit}
-                    </span>
-                    {isLowStock(item) && (
-                      <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">
-                        Low Stock
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <MovementIcon className={cn("h-4 w-4", movement.color)} />
-                    <span className={cn("text-sm", movement.color)}>{movement.value}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {new Date(item.lastUpdated).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Product
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Product
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      {view === "summary" ? (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Current Stock</TableHead>
+                <TableHead>Total In</TableHead>
+                <TableHead>Total Out</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Updated</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-
-      {filteredData.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">No products found matching your criteria.</p>
+            </TableHeader>
+            <TableBody>
+              {filteredStockSummary.map((item) => {
+                const stockStatus = getStockStatus(item.currentStock)
+                return (
+                  <TableRow key={item.productId}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{item.productName}</div>
+                        <div className="text-sm text-muted-foreground">{item.unit}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell className="font-medium">{item.currentStock}</TableCell>
+                    <TableCell className="text-green-600">{item.totalIn}</TableCell>
+                    <TableCell className="text-red-600">{item.totalOut}</TableCell>
+                    <TableCell>
+                      <Badge className={stockStatus.color}>
+                        {stockStatus.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{formatDate(item.lastUpdated)}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Package className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          {canEditStock && (
+                            <DropdownMenuItem>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Adjust Stock
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Notes</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStockEntries.map((entry) => (
+                <TableRow key={entry.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{entry.product.name}</div>
+                      <div className="text-sm text-muted-foreground">{entry.product.category}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={entry.type === "IN" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                      {entry.type === "IN" ? "Stock In" : "Stock Out"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{entry.quantity} {entry.product.unit}</TableCell>
+                  <TableCell>{entry.reference}</TableCell>
+                  <TableCell>{entry.notes || "-"}</TableCell>
+                  <TableCell>{formatDate(entry.createdAt)}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Package className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        {canEditStock && (
+                          <DropdownMenuItem>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Entry
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

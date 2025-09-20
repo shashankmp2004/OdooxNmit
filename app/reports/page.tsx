@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { ProtectedRoute } from "@/components/protected-route"
@@ -30,32 +30,39 @@ import {
   Legend,
 } from "recharts"
 
-// Mock data for charts
-const ordersCompletionData = [
-  { week: "Week 1", completed: 24, delayed: 3 },
-  { week: "Week 2", completed: 28, delayed: 2 },
-  { week: "Week 3", completed: 32, delayed: 5 },
-  { week: "Week 4", completed: 26, delayed: 4 },
-  { week: "Week 5", completed: 30, delayed: 2 },
-  { week: "Week 6", completed: 35, delayed: 3 },
-]
+// Define TypeScript interfaces for API responses
+interface OrderAnalytics {
+  week: string
+  completed: number
+  delayed: number
+}
 
-const resourceUtilizationData = [
-  { name: "Welding Station A", value: 87, color: "#3b82f6" },
-  { name: "Assembly Line B", value: 92, color: "#10b981" },
-  { name: "CNC Machine 3", value: 78, color: "#f59e0b" },
-  { name: "QC Station 1", value: 65, color: "#ef4444" },
-  { name: "Electrical Station", value: 83, color: "#8b5cf6" },
-]
+interface UtilizationData {
+  name: string
+  value: number
+  color: string
+  [key: string]: any
+}
 
-const productionOutputData = [
-  { month: "Jan", output: 1200, target: 1100 },
-  { month: "Feb", output: 1350, target: 1200 },
-  { month: "Mar", output: 1180, target: 1250 },
-  { month: "Apr", output: 1420, target: 1300 },
-  { month: "May", output: 1380, target: 1350 },
-  { month: "Jun", output: 1520, target: 1400 },
-]
+interface ProductionData {
+  month: string
+  output: number
+  target: number
+}
+
+interface AnalyticsSummary {
+  kpis: {
+    totalOrders: { value: number; change: number; trend: string }
+    avgLeadTime: { value: number; change: number; trend: string; unit: string }
+    onTimeDelivery: { value: number; change: number; trend: string; unit: string }
+    qualityScore: { value: number; change: number; trend: string; unit: string }
+  }
+  summary: {
+    productionEfficiency: { value: number; unit: string }
+    costPerUnit: { value: number; change: number; trend: string; unit: string }
+    defectRate: { value: number; change: number; trend: string; unit: string }
+  }
+}
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -64,8 +71,73 @@ export default function ReportsPage() {
   })
   const [productFilter, setProductFilter] = useState("all")
   const [workCenterFilter, setWorkCenterFilter] = useState("all")
+  const [loading, setLoading] = useState(true)
+  
+  // State for real data
+  const [ordersData, setOrdersData] = useState<OrderAnalytics[]>([])
+  const [utilizationData, setUtilizationData] = useState<UtilizationData[]>([])
+  const [productionData, setProductionData] = useState<ProductionData[]>([])
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsSummary | null>(null)
+  const [filterOptions, setFilterOptions] = useState<{
+    products: Array<{id: string, name: string, sku: string}>
+    workCenters: Array<{id: string, name: string}>
+  }>({ products: [], workCenters: [] })
+  
   const { toast } = useToast()
-  const { user } = useAuth()
+  const { data: session } = useAuth()
+
+  // Fetch all analytics data
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      try {
+        setLoading(true)
+        
+        const [ordersRes, utilizationRes, productionRes, summaryRes, filtersRes] = await Promise.all([
+          fetch("/api/analytics/orders"),
+          fetch("/api/analytics/utilization"),
+          fetch("/api/analytics/production"),
+          fetch("/api/analytics/summary"),
+          fetch("/api/analytics/filters"),
+        ])
+
+        if (ordersRes.ok) {
+          const orders = await ordersRes.json()
+          setOrdersData(Array.isArray(orders) ? orders : [])
+        }
+
+        if (utilizationRes.ok) {
+          const utilization = await utilizationRes.json()
+          setUtilizationData(Array.isArray(utilization) ? utilization : [])
+        }
+
+        if (productionRes.ok) {
+          const production = await productionRes.json()
+          setProductionData(Array.isArray(production) ? production : [])
+        }
+
+        if (summaryRes.ok) {
+          const summary = await summaryRes.json()
+          setAnalyticsData(summary)
+        }
+
+        if (filtersRes.ok) {
+          const filters = await filtersRes.json()
+          setFilterOptions(filters)
+        }
+      } catch (error) {
+        console.error("Error fetching analytics data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load analytics data",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAnalyticsData()
+  }, [])
 
   const handleDateRangeChange = (range: "7d" | "30d" | "90d" | "custom") => {
     const now = new Date()
@@ -112,11 +184,11 @@ export default function ReportsPage() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={["Manager", "Admin"]}>
+    <ProtectedRoute allowedRoles={["MANAGER", "ADMIN"]}>
       <div className="flex h-screen bg-background">
-        <Sidebar userRole={user?.role} />
+        <Sidebar userRole={session?.user?.role} />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Reports & Analytics" userName={`${user?.name} (${user?.role})`} />
+          <Header title="Reports & Analytics" userName={`${session?.user?.name} (${session?.user?.role})`} />
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* KPI Cards */}
@@ -127,8 +199,21 @@ export default function ReportsPage() {
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground">175</div>
-                    <p className="text-xs text-green-400 mt-1">+12% from last month</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground">
+                          {analyticsData?.kpis.totalOrders.value || 0}
+                        </div>
+                        <p className={`text-xs mt-1 ${
+                          (analyticsData?.kpis.totalOrders.change || 0) >= 0 ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {(analyticsData?.kpis.totalOrders.change || 0) >= 0 ? "+" : ""}
+                          {(analyticsData?.kpis.totalOrders.change || 0).toFixed(1)}% from last month
+                        </p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -138,8 +223,20 @@ export default function ReportsPage() {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground">4.2 days</div>
-                    <p className="text-xs text-green-400 mt-1">-0.3 days from last month</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground">
+                          {analyticsData?.kpis.avgLeadTime.value || 0} {analyticsData?.kpis.avgLeadTime.unit || "days"}
+                        </div>
+                        <p className={`text-xs mt-1 ${
+                          (analyticsData?.kpis.avgLeadTime.change || 0) <= 0 ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {(analyticsData?.kpis.avgLeadTime.change || 0).toFixed(1)} days from last month
+                        </p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -149,8 +246,21 @@ export default function ReportsPage() {
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground">94.2%</div>
-                    <p className="text-xs text-green-400 mt-1">+2.1% from last month</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground">
+                          {analyticsData?.kpis.onTimeDelivery.value || 0}{analyticsData?.kpis.onTimeDelivery.unit || "%"}
+                        </div>
+                        <p className={`text-xs mt-1 ${
+                          (analyticsData?.kpis.onTimeDelivery.change || 0) >= 0 ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {(analyticsData?.kpis.onTimeDelivery.change || 0) >= 0 ? "+" : ""}
+                          {(analyticsData?.kpis.onTimeDelivery.change || 0).toFixed(1)}% from last month
+                        </p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -160,8 +270,21 @@ export default function ReportsPage() {
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground">98.7%</div>
-                    <p className="text-xs text-green-400 mt-1">+0.5% from last month</p>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground">
+                          {analyticsData?.kpis.qualityScore.value || 0}{analyticsData?.kpis.qualityScore.unit || "%"}
+                        </div>
+                        <p className={`text-xs mt-1 ${
+                          (analyticsData?.kpis.qualityScore.change || 0) >= 0 ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {(analyticsData?.kpis.qualityScore.change || 0) >= 0 ? "+" : ""}
+                          {(analyticsData?.kpis.qualityScore.change || 0).toFixed(1)}% from last month
+                        </p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -256,10 +379,11 @@ export default function ReportsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Products</SelectItem>
-                          <SelectItem value="steel-frame">Steel Frame Assembly</SelectItem>
-                          <SelectItem value="hydraulic-pump">Hydraulic Pump Unit</SelectItem>
-                          <SelectItem value="control-panel">Control Panel Board</SelectItem>
-                          <SelectItem value="motor-housing">Motor Housing</SelectItem>
+                          {filterOptions.products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} ({product.sku})
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
 
@@ -270,10 +394,11 @@ export default function ReportsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Work Centers</SelectItem>
-                          <SelectItem value="welding-a">Welding Station A</SelectItem>
-                          <SelectItem value="assembly-b">Assembly Line B</SelectItem>
-                          <SelectItem value="cnc-3">CNC Machine 3</SelectItem>
-                          <SelectItem value="qc-1">QC Station 1</SelectItem>
+                          {filterOptions.workCenters.map((workCenter) => (
+                            <SelectItem key={workCenter.id} value={workCenter.id}>
+                              {workCenter.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -310,7 +435,7 @@ export default function ReportsPage() {
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={ordersCompletionData}>
+                      <BarChart data={ordersData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                         <XAxis dataKey="week" stroke="#9ca3af" />
                         <YAxis stroke="#9ca3af" />
@@ -332,7 +457,7 @@ export default function ReportsPage() {
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
-                          data={resourceUtilizationData}
+                          data={utilizationData}
                           cx="50%"
                           cy="50%"
                           outerRadius={100}
@@ -340,7 +465,7 @@ export default function ReportsPage() {
                           dataKey="value"
                           label={({ name, value }) => `${name}: ${value}%`}
                         >
-                          {resourceUtilizationData.map((entry, index) => (
+                          {utilizationData.map((entry: UtilizationData, index: number) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -358,7 +483,7 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={productionOutputData}>
+                    <LineChart data={productionData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                       <XAxis dataKey="month" stroke="#9ca3af" />
                       <YAxis stroke="#9ca3af" />
@@ -393,10 +518,19 @@ export default function ReportsPage() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Production Efficiency</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground mb-2">92.4%</div>
-                    <div className="text-sm text-muted-foreground">
-                      Average across all work centers for the selected period
-                    </div>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground mb-2">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground mb-2">
+                          {analyticsData?.summary.productionEfficiency.value || 0}
+                          {analyticsData?.summary.productionEfficiency.unit || "%"}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Average across all work centers for the selected period
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -405,8 +539,22 @@ export default function ReportsPage() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Cost per Unit</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground mb-2">$247.50</div>
-                    <div className="text-sm text-green-400">-$12.30 from last period</div>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground mb-2">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground mb-2">
+                          {analyticsData?.summary.costPerUnit.unit || "$"}
+                          {analyticsData?.summary.costPerUnit.value || 0}
+                        </div>
+                        <div className={`text-sm ${
+                          (analyticsData?.summary.costPerUnit.change || 0) <= 0 ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {analyticsData?.summary.costPerUnit.unit || "$"}
+                          {(analyticsData?.summary.costPerUnit.change || 0).toFixed(2)} from last period
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -415,8 +563,21 @@ export default function ReportsPage() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Defect Rate</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-foreground mb-2">1.3%</div>
-                    <div className="text-sm text-green-400">-0.2% from last period</div>
+                    {loading ? (
+                      <div className="text-2xl font-bold text-foreground mb-2">Loading...</div>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-foreground mb-2">
+                          {analyticsData?.summary.defectRate.value || 0}
+                          {analyticsData?.summary.defectRate.unit || "%"}
+                        </div>
+                        <div className={`text-sm ${
+                          (analyticsData?.summary.defectRate.change || 0) <= 0 ? "text-green-400" : "text-red-400"
+                        }`}>
+                          {(analyticsData?.summary.defectRate.change || 0).toFixed(1)}% from last period
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>

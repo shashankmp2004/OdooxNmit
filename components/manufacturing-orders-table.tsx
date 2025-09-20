@@ -1,151 +1,170 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { StatusBadge } from "@/components/status-badge"
-import { MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react"
+import { MoreHorizontal, Eye, Edit, Trash2, Plus } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface ManufacturingOrder {
   id: string
-  product: string
+  orderNo: string
+  name: string
+  product: {
+    id: string
+    name: string
+  }
   quantity: number
-  status: "planned" | "in-progress" | "completed" | "cancelled" | "delayed"
-  startDate: string
-  endDate: string
-  progress: number
-  priority: "low" | "medium" | "high"
+  state: "PLANNED" | "IN_PROGRESS" | "DONE" | "CANCELED"
+  deadline: string | null
+  createdAt: string
+  updatedAt: string
+  workOrders?: any[]
 }
-
-const mockOrders: ManufacturingOrder[] = [
-  {
-    id: "MO-2024-001",
-    product: "Steel Frame Assembly",
-    quantity: 150,
-    status: "in-progress",
-    startDate: "2024-01-15",
-    endDate: "2024-01-25",
-    progress: 65,
-    priority: "high",
-  },
-  {
-    id: "MO-2024-002",
-    product: "Hydraulic Pump Unit",
-    quantity: 75,
-    status: "planned",
-    startDate: "2024-01-20",
-    endDate: "2024-02-05",
-    progress: 0,
-    priority: "medium",
-  },
-  {
-    id: "MO-2024-003",
-    product: "Control Panel Board",
-    quantity: 200,
-    status: "completed",
-    startDate: "2024-01-10",
-    endDate: "2024-01-18",
-    progress: 100,
-    priority: "low",
-  },
-  {
-    id: "MO-2024-004",
-    product: "Motor Housing",
-    quantity: 120,
-    status: "delayed",
-    startDate: "2024-01-12",
-    endDate: "2024-01-22",
-    progress: 45,
-    priority: "high",
-  },
-  {
-    id: "MO-2024-005",
-    product: "Bearing Assembly",
-    quantity: 300,
-    status: "in-progress",
-    startDate: "2024-01-18",
-    endDate: "2024-01-28",
-    progress: 30,
-    priority: "medium",
-  },
-]
 
 interface ManufacturingOrdersTableProps {
   statusFilter?: string
   searchQuery?: string
+  userRole?: string
 }
 
-export function ManufacturingOrdersTable({ statusFilter, searchQuery }: ManufacturingOrdersTableProps) {
-  const [orders] = useState<ManufacturingOrder[]>(mockOrders)
+export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole = "OPERATOR" }: ManufacturingOrdersTableProps) {
+  const [orders, setOrders] = useState<ManufacturingOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesStatus = !statusFilter || statusFilter === "all" || order.status === statusFilter
+  // Role-based permissions
+  const canEditOrders = ["ADMIN", "MANAGER"].includes(userRole)
+  const canViewAllOrders = ["ADMIN", "MANAGER"].includes(userRole)
+  const canCancelOrders = ["ADMIN", "MANAGER"].includes(userRole)
+
+  // Fetch manufacturing orders from API
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/mos')
+        
+        if (response.ok) {
+          const data = await response.json()
+          // Handle paginated response structure
+          const ordersArray = data.manufacturingOrders || data || []
+          setOrders(Array.isArray(ordersArray) ? ordersArray : [])
+        } else {
+          setError('Failed to fetch manufacturing orders')
+        }
+      } catch (err) {
+        setError('Error loading manufacturing orders')
+        console.error('Error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrders()
+  }, [])
+
+  const filteredOrders = (Array.isArray(orders) ? orders : []).filter((order) => {
+    const matchesStatus = !statusFilter || statusFilter === "all" || order.state.toLowerCase() === statusFilter.toLowerCase()
     const matchesSearch =
       !searchQuery ||
-      order.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.id.toLowerCase().includes(searchQuery.toLowerCase())
+      order.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.orderNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.name.toLowerCase().includes(searchQuery.toLowerCase())
 
     return matchesStatus && matchesSearch
   })
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-500/20 text-red-400 border-red-500/30"
-      case "medium":
-        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-      case "low":
-        return "bg-green-500/20 text-green-400 border-green-500/30"
+  const getStatusColor = (state: string) => {
+    switch (state) {
+      case "PLANNED":
+        return "bg-blue-100 text-blue-800"
+      case "IN_PROGRESS":
+        return "bg-yellow-100 text-yellow-800"
+      case "DONE":
+        return "bg-green-100 text-green-800"
+      case "CANCELED":
+        return "bg-red-100 text-red-800"
       default:
-        return "bg-muted text-muted-foreground"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-muted-foreground">Loading manufacturing orders...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-red-500">{error}</div>
+      </div>
+    )
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+        <div className="text-muted-foreground">No manufacturing orders found</div>
+        {canEditOrders && (
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Create First Manufacturing Order
+          </Button>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-md border border-border bg-card">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
-          <TableRow className="border-border hover:bg-muted/50">
-            <TableHead className="text-muted-foreground">Order ID</TableHead>
-            <TableHead className="text-muted-foreground">Product</TableHead>
-            <TableHead className="text-muted-foreground">Quantity</TableHead>
-            <TableHead className="text-muted-foreground">Status</TableHead>
-            <TableHead className="text-muted-foreground">Priority</TableHead>
-            <TableHead className="text-muted-foreground">Start Date</TableHead>
-            <TableHead className="text-muted-foreground">End Date</TableHead>
-            <TableHead className="text-muted-foreground">Progress</TableHead>
-            <TableHead className="text-muted-foreground w-[50px]"></TableHead>
+          <TableRow>
+            <TableHead>Order No</TableHead>
+            <TableHead>Product</TableHead>
+            <TableHead>Quantity</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Deadline</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredOrders.map((order) => (
-            <TableRow key={order.id} className="border-border hover:bg-muted/50">
-              <TableCell className="font-mono text-sm text-foreground">{order.id}</TableCell>
-              <TableCell className="font-medium text-foreground">{order.product}</TableCell>
-              <TableCell className="text-foreground">{order.quantity.toLocaleString()}</TableCell>
+            <TableRow key={order.id}>
+              <TableCell className="font-medium">{order.orderNo}</TableCell>
               <TableCell>
-                <StatusBadge status={order.status} />
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={getPriorityColor(order.priority)}>
-                  {order.priority.charAt(0).toUpperCase() + order.priority.slice(1)}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-muted-foreground">{new Date(order.startDate).toLocaleDateString()}</TableCell>
-              <TableCell className="text-muted-foreground">{new Date(order.endDate).toLocaleDateString()}</TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Progress value={order.progress} className="w-16 h-2" />
-                  <span className="text-sm text-muted-foreground w-10">{order.progress}%</span>
+                <div>
+                  <div className="font-medium">{order.product.name}</div>
+                  <div className="text-sm text-muted-foreground">{order.name}</div>
                 </div>
               </TableCell>
+              <TableCell>{order.quantity}</TableCell>
+              <TableCell>
+                <Badge className={getStatusColor(order.state)}>
+                  {order.state.replace('_', ' ')}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {order.deadline ? formatDate(order.deadline) : 'No deadline'}
+              </TableCell>
+              <TableCell>{formatDate(order.createdAt)}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -154,14 +173,18 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery }: Manufact
                       <Eye className="mr-2 h-4 w-4" />
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Order
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Cancel Order
-                    </DropdownMenuItem>
+                    {canEditOrders && (
+                      <DropdownMenuItem>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Order
+                      </DropdownMenuItem>
+                    )}
+                    {canCancelOrders && (
+                      <DropdownMenuItem className="text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Cancel Order
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
