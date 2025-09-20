@@ -10,6 +10,9 @@ import { LiveActivityFeed } from "@/components/live-activity-feed"
 import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/components/auth-provider"
 import { Package, Clock, AlertTriangle, TrendingUp } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { motion, AnimatePresence } from "framer-motion"
+import WorkOrdersPanel from "../../components/work-orders-panel"
 
 interface DashboardStats {
   ordersCompleted: number
@@ -29,6 +32,7 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<string>("overview")
   const { data: session } = useAuth()
 
   const userRole = session?.user?.role || "OPERATOR"
@@ -127,12 +131,31 @@ export default function DashboardPage() {
       <div className="flex h-screen bg-background">
         <Sidebar userRole={session?.user?.role} />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header title="Manufacturing Dashboard" />
+          <Header title="ManufactureOS" />
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto space-y-6">
-              <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+              <Tabs value={tab} onValueChange={setTab} className="w-full">
+                <div className="flex items-center justify-between">
+                  <TabsList>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="work-orders">Work Orders</TabsTrigger>
+                    <TabsTrigger value="reports">Reports</TabsTrigger>
+                    <TabsTrigger value="stock">Stock</TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={tab}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <TabsContent value="overview">
+                      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
                 {/* Left side - Main content */}
-                <div className="xl:col-span-3 space-y-6">
+                        <div className="xl:col-span-3 space-y-6">
                   {/* KPI Cards - Only for Admins and Managers */}
                   {canViewKPIs && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -198,37 +221,53 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  {/* Filters */}
-                  <DashboardFilterBar
-                    onStatusChange={setStatusFilter}
-                    onSearchChange={setSearchQuery}
-                    onDateRangeChange={handleDateRangeChange}
-                  />
+                          {/* Filters */}
+                          <DashboardFilterBar
+                            onStatusChange={setStatusFilter}
+                            onSearchChange={setSearchQuery}
+                            onDateRangeChange={handleDateRangeChange}
+                          />
 
-                  {/* Manufacturing Orders Table */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-semibold text-foreground">
-                        {userRole === "OPERATOR" ? "My Work Orders" : "Manufacturing Orders"}
-                      </h2>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <ManufacturingOrdersTable 
-                        statusFilter={statusFilter} 
-                        searchQuery={searchQuery}
-                        userRole={userRole}
-                        startDate={startDate}
-                        endDate={endDate}
-                      />
-                    </div>
-                  </div>
-                </div>
+                          {/* Manufacturing Orders Table */}
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h2 className="text-xl font-semibold text-foreground">
+                                {userRole === "OPERATOR" ? "My Work Orders" : "Manufacturing Orders"}
+                              </h2>
+                            </div>
+                            <div className="overflow-x-auto">
+                              <ManufacturingOrdersTable 
+                                statusFilter={statusFilter} 
+                                searchQuery={searchQuery}
+                                userRole={userRole}
+                                startDate={startDate}
+                                endDate={endDate}
+                              />
+                            </div>
+                          </div>
+                        </div>
 
-                {/* Right side - Live Activity Feed */}
-                <div className="xl:col-span-1">
-                  <LiveActivityFeed />
-                </div>
-              </div>
+                        {/* Right side - Live Activity Feed */}
+                        <div className="xl:col-span-1">
+                          <LiveActivityFeed />
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="work-orders">
+                      <WorkOrdersPanel />
+                    </TabsContent>
+
+                    <TabsContent value="reports">
+                      <div className="bg-card p-6 rounded-lg border">Reports area (coming soon)</div>
+                    </TabsContent>
+
+                    <TabsContent value="stock">
+                      <div className="bg-card p-6 rounded-lg border">Stock area (coming soon)</div>
+                    </TabsContent>
+                  </motion.div>
+                </AnimatePresence>
+              </Tabs>
             </div>
           </main>
         </div>
