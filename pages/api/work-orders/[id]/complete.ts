@@ -97,7 +97,7 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
     }
 
     // Emit real-time events
-    socketService.emitWorkOrderCompleted(id, {
+    socketService.emitWorkOrderUpdate(id, {
       workOrder: updatedWO,
       completedBy: req.user.name,
       completedAt: new Date().toISOString(),
@@ -107,7 +107,7 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
 
     // If MO completed, emit MO completion event too
     if (allCompleted && updatedMO) {
-      socketService.emitMOCompleted(wo.moId, {
+      socketService.emitWorkOrderUpdate(wo.moId, {
         manufacturingOrder: updatedMO,
         stockConsumption: stockConsumptionResult
       });

@@ -29,26 +29,30 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
       return res.status(404).json({ error: "Work Order not found" });
     }
 
-    // Permission check: Operators can only start their own work orders
+    // Permission check: Operators can only pause their own work orders
     if (req.user.role === "OPERATOR" && wo.assignedToId !== req.user.id) {
-      return res.status(403).json({ error: "You can only start work orders assigned to you" });
+      return res.status(403).json({ error: "You can only pause work orders assigned to you" });
     }
 
-    // Check if work order can be started
-    if (!["PENDING", "PAUSED"].includes(wo.status)) {
-      return res.status(400).json({ error: "Work order can only be started from PENDING or PAUSED status" });
+    // Check if work order can be paused
+    if (wo.status !== "STARTED") {
+      return res.status(400).json({ error: "Work order can only be paused from STARTED status" });
     }
 
-    // Check if MO is not completed/canceled
-    if (wo.mo.state === "DONE" || wo.mo.state === "CANCELED") {
-      return res.status(400).json({ error: "Cannot start work order for completed/canceled manufacturing order" });
+    // Calculate actual time spent so far
+    let actualTime = wo.actualTime || 0;
+    if (wo.startTime) {
+      const timeSpent = (new Date().getTime() - new Date(wo.startTime).getTime()) / (1000 * 60 * 60); // hours
+      actualTime += timeSpent;
     }
 
     const updatedWO = await prisma.workOrder.update({
       where: { id },
       data: {
-        status: "STARTED",
-        startTime: new Date()
+        status: "PAUSED",
+        actualTime,
+        // Clear startTime since we'll set it again when resuming
+        startTime: null
       },
       include: {
         mo: {
@@ -62,27 +66,20 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
       }
     });
 
-    // Update MO status to IN_PROGRESS if it's still PLANNED
-    if (wo.mo.state === "PLANNED") {
-      await prisma.manufacturingOrder.update({
-        where: { id: wo.moId },
-        data: { state: "IN_PROGRESS" }
-      });
-    }
-
     // Emit real-time events
     socketService.emitWorkOrderUpdate(id, {
       workOrder: updatedWO,
-      startedBy: req.user.name,
-      startedAt: new Date().toISOString()
+      pausedBy: req.user.name,
+      pausedAt: new Date().toISOString(),
+      actualTimeSpent: actualTime
     });
 
     return res.status(200).json({
-      message: "Work order started successfully",
+      message: "Work order paused successfully",
       workOrder: updatedWO
     });
   } catch (error) {
-    console.error("Work Order START error:", error);
-    return res.status(500).json({ error: "Failed to start work order" });
+    console.error("Work Order PAUSE error:", error);
+    return res.status(500).json({ error: "Failed to pause work order" });
   }
 });

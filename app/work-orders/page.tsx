@@ -10,6 +10,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, RefreshCw, Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -78,51 +79,125 @@ export default function WorkOrdersPage() {
     fetchWorkOrders()
   }, [])
 
-  const filteredWorkOrders = (Array.isArray(workOrders) ? workOrders : []).filter((order) => {
+  const filteredWorkOrders = (Array.isArray(workOrders) ? workOrders : []).filter((order: any) => {
     const matchesSearch =
-      order.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.orderNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.workCenter.name.toLowerCase().includes(searchQuery.toLowerCase())
+      (order.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (order.mo?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (order.mo?.orderNo?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (order.description?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (order.assignedTo?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase())
 
-    const matchesStatus = statusFilter === "all" || order.state.toLowerCase() === statusFilter.toLowerCase()
+    const matchesStatus = statusFilter === "all" || (order.status?.toLowerCase() || "") === statusFilter.toLowerCase()
     // Note: The API doesn't have priority field, so we'll ignore priority filter for now
     // const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter
 
     return matchesSearch && matchesStatus
   })
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    // Update work order status via API
-    fetch(`/api/work-orders/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ state: newStatus.toUpperCase() }),
-    })
-    .then(() => {
-      // Refresh the work orders list
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      let response;
+      
+      if (newStatus === "STARTED") {
+        response = await fetch(`/api/work-orders/${id}/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } else if (newStatus === "PAUSED") {
+        response = await fetch(`/api/work-orders/${id}/pause`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } else if (newStatus === "COMPLETED") {
+        response = await fetch(`/api/work-orders/${id}/complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } else {
+        // Fallback to PATCH for other status changes
+        response = await fetch(`/api/work-orders/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ state: newStatus.toUpperCase() }),
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to update work order: ${response.statusText}`);
+      }
+
+      const updatedWorkOrder = await response.json();
+
+      // Update local state with the response from server
       setWorkOrders((prev) =>
         prev.map((order) =>
           order.id === id
-            ? { ...order, state: newStatus.toUpperCase() as WorkOrder["state"] }
+            ? { ...order, ...updatedWorkOrder }
             : order,
         ),
-      )
+      );
 
       toast({
         title: "Status Updated",
-        description: `Work order ${id} status changed to ${newStatus}`,
-      })
-    })
-    .catch((error) => {
-      console.error('Error updating work order:', error)
+        description: `Work order status changed to ${newStatus}`,
+      });
+
+    } catch (error) {
+      console.error('Error updating work order:', error);
       toast({
         title: "Error",
         description: "Failed to update work order status",
         variant: "destructive",
-      })
-    })
+      });
+    }
+  }
+
+  const handleProgressUpdate = async (id: string, progress: number) => {
+    try {
+      const response = await fetch(`/api/work-orders/${id}/progress`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ progress }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update progress: ${response.statusText}`);
+      }
+
+      const updatedWorkOrder = await response.json();
+
+      // Update local state with the response from server
+      setWorkOrders((prev) =>
+        prev.map((order) =>
+          order.id === id
+            ? { ...order, ...updatedWorkOrder }
+            : order,
+        ),
+      );
+
+      toast({
+        title: "Progress Updated",
+        description: `Work order progress set to ${progress}%`,
+      });
+
+    } catch (error) {
+      console.error('Error updating progress:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update work order progress",
+        variant: "destructive",
+      });
+    }
   }
 
   const handleReportIssue = (id: string) => {
@@ -245,40 +320,69 @@ export default function WorkOrdersPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredWorkOrders.map((workOrder) => (
+                  {filteredWorkOrders.map((workOrder: any) => (
                     <div key={workOrder.id} className="bg-card border rounded-lg p-4">
                       <div className="space-y-2">
                         <div className="flex justify-between items-start">
-                          <h3 className="font-medium">{workOrder.name}</h3>
-                          <Badge>{workOrder.state}</Badge>
+                          <h3 className="font-medium">{workOrder.title || workOrder.mo?.name || 'Unnamed Work Order'}</h3>
+                          <Badge>{workOrder.status || 'PENDING'}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">Order: {workOrder.orderNo}</p>
-                        <p className="text-sm text-muted-foreground">Work Center: {workOrder.workCenter.name}</p>
+                        <p className="text-sm text-muted-foreground">Order: {workOrder.mo?.orderNo || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">Machine/Work Center: {workOrder.machineWorkCenter || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">
-                          Estimated: {workOrder.estimatedHours}h
-                          {workOrder.actualHours && ` | Actual: ${workOrder.actualHours}h`}
+                          Estimated: {workOrder.estimatedTime || 0}h
+                          {workOrder.actualTime && ` | Actual: ${workOrder.actualTime}h`}
                         </p>
-                        {workOrder.assignedUser && (
-                          <p className="text-sm text-muted-foreground">Assigned: {workOrder.assignedUser.name}</p>
+                        
+                        {/* Progress Section */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Progress:</span>
+                            <span className="text-sm font-medium">{workOrder.progress || 0}%</span>
+                          </div>
+                          {(workOrder.status === "STARTED" || workOrder.status === "PAUSED") && (
+                            <div className="space-y-2">
+                              <Slider
+                                value={[workOrder.progress || 0]}
+                                onValueChange={(value) => handleProgressUpdate(workOrder.id, value[0])}
+                                max={100}
+                                step={5}
+                                className="w-full"
+                              />
+                              <p className="text-xs text-muted-foreground">Drag to update progress</p>
+                            </div>
+                          )}
+                        </div>
+                        {workOrder.assignedTo && (
+                          <p className="text-sm text-muted-foreground">Assigned: {workOrder.assignedTo.name}</p>
                         )}
-                        {workOrder.deadline && (
+                        {workOrder.mo?.deadline && (
                           <p className="text-sm text-muted-foreground">
-                            Deadline: {new Date(workOrder.deadline).toLocaleDateString()}
+                            Deadline: {new Date(workOrder.mo.deadline).toLocaleDateString()}
                           </p>
                         )}
                         <div className="flex gap-2 mt-4">
                           <Button 
                             size="sm" 
-                            onClick={() => handleStatusChange(workOrder.id, "IN_PROGRESS")}
-                            disabled={workOrder.state === "IN_PROGRESS"}
+                            onClick={() => handleStatusChange(workOrder.id, "STARTED")}
+                            disabled={workOrder.status === "STARTED" || workOrder.status === "COMPLETED"}
                           >
-                            Start
+                            {workOrder.status === "PAUSED" ? "Resume" : "Start"}
                           </Button>
+                          {workOrder.status === "STARTED" && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleStatusChange(workOrder.id, "PAUSED")}
+                            >
+                              Pause
+                            </Button>
+                          )}
                           <Button 
                             size="sm" 
                             variant="outline"
                             onClick={() => handleStatusChange(workOrder.id, "COMPLETED")}
-                            disabled={workOrder.state === "COMPLETED"}
+                            disabled={workOrder.status === "COMPLETED" || workOrder.status === "PENDING"}
                           >
                             Complete
                           </Button>
