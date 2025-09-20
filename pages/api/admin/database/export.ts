@@ -14,67 +14,55 @@ export default requireRole(["ADMIN"], async (req, res) => {
       return res.status(400).json({ error: "Table name is required" });
     }
 
-    let data: any[] = [];
+    // Verify table exists in the database
+    const tableCheck: any[] = await prisma.$queryRaw`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = ${table}
+      AND table_type = 'BASE TABLE';
+    `;
 
-    // Fetch all data from the specified table
-    switch (table.toLowerCase()) {
-      case 'user':
-        data = await prisma.user.findMany({
-          orderBy: { createdAt: 'desc' }
-        });
-        break;
-      case 'product':
-        data = await prisma.product.findMany({
-          orderBy: { createdAt: 'desc' }
-        });
-        break;
-      case 'manufacturingorder':
-        data = await prisma.manufacturingOrder.findMany({
-          include: {
-            product: { select: { name: true } },
-            createdBy: { select: { name: true } }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-        break;
-      case 'workorder':
-        data = await prisma.workOrder.findMany({
-          include: {
-            mo: { select: { orderNo: true, name: true } },
-            assignedTo: { select: { name: true } }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-        break;
-      case 'stockentry':
-        data = await prisma.stockEntry.findMany({
-          include: {
-            product: { select: { name: true } }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-        break;
-      case 'comment':
-        data = await prisma.comment.findMany({
-          include: {
-            user: { select: { name: true } },
-            workOrder: { select: { title: true } }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
-        break;
-      default:
-        return res.status(400).json({ error: "Invalid table name" });
+    if (tableCheck.length === 0) {
+      return res.status(404).json({ error: "Table not found" });
     }
+
+    // Get column information to determine order by clause
+    const columnInfo: any[] = await prisma.$queryRaw`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = ${table}
+      AND table_schema = 'public'
+      ORDER BY ordinal_position;
+    `;
+
+    const columns = columnInfo.map(col => col.column_name);
+    const orderByColumn = columns.includes('createdAt') ? 'createdAt' : 
+                         columns.includes('created_at') ? 'created_at' : 
+                         columns.includes('id') ? 'id' : columns[0];
+
+    // Get all data from the table dynamically
+    const data: any[] = await prisma.$queryRawUnsafe(`
+      SELECT * FROM "${table}" 
+      ORDER BY "${orderByColumn}" DESC
+    `);
 
     // Set headers for file download
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${table}_export.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${table}_export_${new Date().toISOString().split('T')[0]}.json"`);
 
-    return res.status(200).json(data);
+    return res.status(200).json({
+      table: table,
+      exportDate: new Date().toISOString(),
+      recordCount: data.length,
+      data: data
+    });
 
   } catch (error) {
     console.error("Error exporting data:", error);
-    return res.status(500).json({ error: "Failed to export data" });
+    return res.status(500).json({ 
+      error: "Failed to export data",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
   }
 });

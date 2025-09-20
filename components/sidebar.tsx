@@ -36,6 +36,12 @@ const navigation = [
     roles: ["OPERATOR", "MANAGER", "ADMIN"],
   },
   {
+    name: "Work Centers",
+    href: "/work-centers",
+    icon: Factory,
+    roles: ["OPERATOR", "MANAGER", "ADMIN"],
+  },
+  {
     name: "Stock Ledger",
     href: "/stock-ledger",
     icon: Warehouse,
