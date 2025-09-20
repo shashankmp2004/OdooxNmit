@@ -56,6 +56,37 @@ export default requireRole(["ADMIN"], async (req, res) => {
         return res.status(400).json({ error: "Product not found" });
       }
 
+      // Try to build a BOM snapshot for this product (using either new BOM.items or legacy BOM.components)
+      // Prefer active BOM version if available
+      const activeBOM = await prisma.bOM.findFirst({
+        where: { productId, isActive: true },
+        include: {
+          items: { include: { component: true } },
+          components: { include: { material: true } }
+        }
+      });
+
+      let bomSnapshot: any = null;
+      if (activeBOM) {
+        if (activeBOM.items && activeBOM.items.length > 0) {
+          // New structure
+          bomSnapshot = activeBOM.items.map((i: any) => ({
+            materialId: i.componentId,
+            materialName: i.component?.name,
+            materialSku: i.component?.sku,
+            qtyPerUnit: i.quantity
+          }));
+        } else if (activeBOM.components && activeBOM.components.length > 0) {
+          // Legacy structure
+          bomSnapshot = activeBOM.components.map((c: any) => ({
+            materialId: c.materialId,
+            materialName: c.material?.name,
+            materialSku: c.material?.sku,
+            qtyPerUnit: c.qtyPerUnit
+          }));
+        }
+      }
+
       // Create manufacturing order
       const order = await prisma.manufacturingOrder.create({
         data: {
@@ -65,6 +96,9 @@ export default requireRole(["ADMIN"], async (req, res) => {
           quantity: parseInt(quantity),
           state: state || 'PLANNED',
           deadline: deadline ? new Date(deadline) : null,
+          bomSnapshot,
+          // Record who created the MO when available via auth wrapper
+          createdById: (req as any).user?.id || null,
         },
         include: {
           product: {

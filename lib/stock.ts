@@ -9,6 +9,29 @@ export interface StockOperation {
   description?: string;
 }
 
+async function emitLowStockForProducts(productIds: string[]) {
+  if (!productIds.length) return;
+  const unique = Array.from(new Set(productIds));
+  const products = await prisma.product.findMany({
+    where: { id: { in: unique } },
+    include: {
+      stockEntries: { orderBy: { createdAt: 'desc' }, take: 1 }
+    }
+  });
+
+  for (const p of products) {
+    const currentStock = p.stockEntries[0]?.balanceAfter ?? 0;
+    if (p.minStockAlert != null && currentStock <= p.minStockAlert) {
+      socketService.emitLowStockAlert(p.id, {
+        productName: p.name,
+        sku: p.sku,
+        currentStock,
+        minStockLevel: p.minStockAlert,
+      });
+    }
+  }
+}
+
 /**
  * Get current stock balance for a product
  */
@@ -50,9 +73,13 @@ export async function createStockEntry(operation: StockOperation, tx?: any): Pro
   const stockEntry = prismaClient.stockEntry.create({
     data: {
       productId: operation.productId,
+      // Maintain both new typed fields and legacy change field
+      type: operation.change >= 0 ? 'IN' : 'OUT',
+      quantity: Math.abs(operation.change),
       change: operation.change,
       sourceType: operation.sourceType,
       sourceId: operation.sourceId,
+      notes: operation.description,
       balanceAfter: newBalance
     }
   });
@@ -83,16 +110,18 @@ export async function createStockEntry(operation: StockOperation, tx?: any): Pro
  * Process multiple stock operations atomically
  */
 export async function processStockOperations(operations: StockOperation[]): Promise<any[]> {
-  return prisma.$transaction(async (tx: any) => {
-    const results: any[] = [];
-    
+  const productIds = operations.map(o => o.productId);
+  const results = await prisma.$transaction(async (tx: any) => {
+    const rows: any[] = [];
     for (const operation of operations) {
       const result = await createStockEntry(operation, tx);
-      results.push(result);
+      rows.push(result);
     }
-    
-    return results;
+    return rows;
   });
+  // After commit, emit any low stock alerts
+  await emitLowStockForProducts(productIds);
+  return results;
 }
 
 /**
@@ -103,7 +132,7 @@ export async function consumeStockForMO(moId: string): Promise<{
   produced: any;
   mo: any;
 }> {
-  return prisma.$transaction(async (tx: any) => {
+  const result = await prisma.$transaction(async (tx: any) => {
     // Get MO with BOM snapshot
     const mo = await tx.manufacturingOrder.findUnique({
       where: { id: moId },
@@ -169,6 +198,16 @@ export async function consumeStockForMO(moId: string): Promise<{
       mo: updatedMO
     };
   });
+  // After commit, check low stock for consumed materials
+  try {
+    const bomSnapshot = (result.mo?.bomSnapshot as any[]) || [];
+    const materialIds = bomSnapshot.map((c: any) => c.materialId).filter(Boolean);
+    await emitLowStockForProducts(materialIds);
+  } catch (e) {
+    // Best-effort alerting; do not fail the main operation
+    console.warn('Low stock alert emission failed:', e);
+  }
+  return result;
 }
 
 /**

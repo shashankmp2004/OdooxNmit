@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { StockLedgerTable } from "@/components/stock-ledger-table"
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Search, Plus, Download, AlertTriangle, Package, TrendingUp, TrendingDown } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -24,6 +26,7 @@ interface StockStats {
 }
 
 export default function StockLedgerPage() {
+  const searchParams = useSearchParams()
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
@@ -35,10 +38,20 @@ export default function StockLedgerPage() {
     stockOutToday: 0
   })
   const [loading, setLoading] = useState(true)
+  const [lowStockItems, setLowStockItems] = useState<any[]>([])
   const { toast } = useToast()
   const { data: session } = useAuth()
 
   // Fetch stock statistics
+  useEffect(() => {
+    // Initialize low stock filter from query param
+  const low = searchParams?.get('low')
+    if (low === '1' || low === 'true') {
+      setShowLowStockOnly(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     const fetchStockStats = async () => {
       try {
@@ -55,6 +68,22 @@ export default function StockLedgerPage() {
     }
 
     fetchStockStats()
+  }, [])
+
+  // Fetch low stock items for the widget
+  useEffect(() => {
+    async function fetchLow() {
+      try {
+        const res = await fetch('/api/stock/low')
+        if (res.ok) {
+          const data = await res.json()
+          setLowStockItems(data.items || [])
+        }
+      } catch (e) {
+        console.error('Error loading low stock items', e)
+      }
+    }
+    fetchLow()
   }, [])
 
   const handleAddProduct = async (data: {
@@ -210,6 +239,42 @@ export default function StockLedgerPage() {
                 </Card>
               </div>
 
+              {/* Low Stock Widget */}
+              <Card className="bg-card border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-400" /> Low Stock Items
+                  </CardTitle>
+                  {lowStockItems.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowLowStockOnly(true)}
+                      className="bg-background border-input"
+                    >
+                      Show Only Low Stock
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {lowStockItems.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No items below threshold</div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {lowStockItems.slice(0, 9).map((it) => (
+                        <div key={it.id} className="border rounded-md p-3 bg-background">
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium truncate" title={it.name}>{it.name}</div>
+                            <Badge variant="destructive">{it.currentStock}</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">Min: {it.minStockLevel} • {it.unit || 'units'}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Filters and Actions */}
               <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between bg-card p-4 rounded-lg border border-border">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-1">
@@ -273,6 +338,7 @@ export default function StockLedgerPage() {
                 <StockLedgerTable
                   searchQuery={searchQuery}
                   categoryFilter={categoryFilter}
+                  lowStockOnlyProductIds={showLowStockOnly ? lowStockItems.map(i => i.id) : undefined}
                 />
               </div>
             </div>

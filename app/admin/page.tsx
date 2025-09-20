@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -45,6 +46,7 @@ interface AdminStats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [lowStock, setLowStock] = useState<any[]>([])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -62,6 +64,17 @@ export default function AdminDashboard() {
     }
 
     fetchStats()
+    // Also fetch low stock list for widget
+    const fetchLow = async () => {
+      try {
+        const res = await fetch('/api/stock/low')
+        if (res.ok) {
+          const data = await res.json()
+          setLowStock(data.items || [])
+        }
+      } catch (e) {}
+    }
+    fetchLow()
   }, [])
 
   if (loading) {
@@ -150,7 +163,30 @@ export default function AdminDashboard() {
 
       {/* Detailed Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* User Breakdown */}
+        {/* Low Stock Widget */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle>Low Stock Items</CardTitle>
+            <Link href="/stock-ledger?low=1">
+              <Button variant="outline" size="sm">View All</Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {lowStock.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No items below threshold</div>
+            ) : (
+              <div className="space-y-2">
+                {lowStock.slice(0, 6).map((it: any) => (
+                  <div key={it.id} className="flex items-center justify-between border rounded-md p-2">
+                    <div className="truncate" title={it.name}>{it.name}</div>
+                    <div className="text-sm text-red-600">{it.currentStock}/{it.minStockLevel}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+  {/* User Breakdown */}
         <Card>
           <CardHeader>
             <CardTitle>User Roles</CardTitle>

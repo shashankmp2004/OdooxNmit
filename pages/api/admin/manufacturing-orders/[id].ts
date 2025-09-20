@@ -37,6 +37,38 @@ export default requireRole(["ADMIN"], async (req, res) => {
         return res.status(400).json({ error: "Product not found" });
       }
 
+      // Decide BOM snapshot handling: if product changed or snapshot missing, regenerate snapshot
+      const existing = await prisma.manufacturingOrder.findUnique({ where: { id } });
+
+      let bomSnapshot: any = existing?.bomSnapshot || null;
+      const productChanged = existing?.productId !== productId;
+      if (productChanged || !bomSnapshot) {
+        const activeBOM = await prisma.bOM.findFirst({
+          where: { productId, isActive: true },
+          include: {
+            items: { include: { component: true } },
+            components: { include: { material: true } }
+          }
+        });
+        if (activeBOM) {
+          if (activeBOM.items && activeBOM.items.length > 0) {
+            bomSnapshot = activeBOM.items.map((i: any) => ({
+              materialId: i.componentId,
+              materialName: i.component?.name,
+              materialSku: i.component?.sku,
+              qtyPerUnit: i.quantity
+            }));
+          } else if (activeBOM.components && activeBOM.components.length > 0) {
+            bomSnapshot = activeBOM.components.map((c: any) => ({
+              materialId: c.materialId,
+              materialName: c.material?.name,
+              materialSku: c.material?.sku,
+              qtyPerUnit: c.qtyPerUnit
+            }));
+          }
+        }
+      }
+
       // Update manufacturing order
       const order = await prisma.manufacturingOrder.update({
         where: { id },
@@ -47,6 +79,8 @@ export default requireRole(["ADMIN"], async (req, res) => {
           quantity: parseInt(quantity),
           state: state || 'PLANNED',
           deadline: deadline ? new Date(deadline) : null,
+          bomSnapshot,
+          updatedAt: new Date(),
         },
         include: {
           product: {

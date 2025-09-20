@@ -40,9 +40,10 @@ interface StockLedgerTableProps {
   searchQuery?: string
   categoryFilter?: string
   userRole?: string
+  lowStockOnlyProductIds?: string[]
 }
 
-export function StockLedgerTable({ searchQuery, categoryFilter, userRole = "OPERATOR" }: StockLedgerTableProps) {
+export function StockLedgerTable({ searchQuery, categoryFilter, userRole = "OPERATOR", lowStockOnlyProductIds }: StockLedgerTableProps) {
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([])
   const [stockSummary, setStockSummary] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -131,7 +132,9 @@ export function StockLedgerTable({ searchQuery, categoryFilter, userRole = "OPER
     
     const matchesCategory = !categoryFilter || categoryFilter === "all" || item.category === categoryFilter
 
-    return matchesSearch && matchesCategory
+    const matchesLowOnly = !lowStockOnlyProductIds || lowStockOnlyProductIds.length === 0 || lowStockOnlyProductIds.includes(item.productId)
+
+    return matchesSearch && matchesCategory && matchesLowOnly
   })
 
   const filteredStockEntries = (Array.isArray(stockEntries) ? stockEntries : []).filter((entry) => {

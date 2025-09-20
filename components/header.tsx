@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Settings, Shield, LayoutDashboard, LogOut } from "lucide-react"
+import { User, Settings, Shield, LayoutDashboard, LogOut, BellOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,6 +13,9 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import RealTimeNotifications from "@/components/real-time-notifications"
+import { useStockAlerts } from "@/hooks/use-socket"
+import { useToast } from "@/hooks/use-toast"
+import React from "react"
 import { SignoutDialog } from "@/components/signout-dialog"
 import { ThemeToggle } from "@/components/theme-toggle"
 import Link from "next/link"
@@ -25,6 +28,41 @@ interface HeaderProps {
 export function Header({ title, userName }: HeaderProps) {
   const { data: session } = useAuth()
   const router = useRouter()
+  const stockAlerts = useStockAlerts()
+  const { toast } = useToast()
+  const [muteUntil, setMuteUntil] = React.useState<number>(0)
+
+  // Restore mute from localStorage (per browser/user)
+  React.useEffect(() => {
+    const raw = localStorage.getItem('muteLowStockUntil')
+    setMuteUntil(raw ? parseInt(raw, 10) : 0)
+  }, [])
+
+  const muteFor10Minutes = () => {
+    const until = Date.now() + 10 * 60 * 1000
+    setMuteUntil(until)
+    localStorage.setItem('muteLowStockUntil', String(until))
+    toast({ title: 'Muted', description: 'Low stock toasts muted for 10 minutes' })
+  }
+
+  // Show toast when a new low stock alert arrives (latest only)
+  // Debounced batch notification to avoid toast spam
+  React.useEffect(() => {
+    if (!stockAlerts?.length) return
+    const low = stockAlerts.filter(a => a.type === 'low_stock')
+    if (!low.length) return
+    if (Date.now() < muteUntil) return
+    const timer = setTimeout(() => {
+      const uniqueProducts = Array.from(new Set(low.map(a => a.data.productName)))
+      const head = uniqueProducts.slice(0, 3).join(', ')
+      const more = uniqueProducts.length > 3 ? ` +${uniqueProducts.length - 3} more` : ''
+      toast({
+        title: "Low Stock Alert",
+        description: `${head}${more}`
+      })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [stockAlerts.map(a => a.timestamp).join('|'), muteUntil])
 
   const displayName = userName || `${session?.user?.name} (${session?.user?.role})`
   const isAdmin = session?.user?.role === 'ADMIN'
@@ -48,7 +86,12 @@ export function Header({ title, userName }: HeaderProps) {
         )}
 
         {/* Notifications */}
-        <RealTimeNotifications />
+        <div className="flex items-center gap-2">
+          <RealTimeNotifications />
+          <Button variant="outline" size="sm" onClick={muteFor10Minutes} title="Mute low stock toasts for 10 minutes">
+            <BellOff className="h-4 w-4" />
+          </Button>
+        </div>
 
         {/* Theme Toggle */}
         <ThemeToggle />

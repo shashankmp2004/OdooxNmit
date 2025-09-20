@@ -74,6 +74,14 @@ For sensitive `/admin` pages, a recent password check is required even if you ha
 Environment requirements:
 - Ensure `NEXTAUTH_SECRET` is set. It is used to sign the reauth cookie.
 
+## Manufacturing workflow updates
+
+- Manufacturing Order (MO) creation in admin now snapshots the active BOM (prefers new `BOM.items`, falls back to legacy `BOM.components`).
+- StockEntry writes include `type` (IN/OUT) and `quantity` alongside legacy `change`, plus `notes` for descriptions.
+- Completing all Work Orders (WOs) for an MO triggers material consumption (OUT per BOM) and finished goods production (IN) via `consumeStockForMO`.
+- When a WO is completed but the MO still has pending steps, the API will auto-create the next station’s WO based on a default route (Cutting → Assembly → Painting) and auto-bind a matching Work Center by name if it exists.
+- You can customize routing later by persisting per-product routes; see `lib/routing.ts` for the current default.
+
 ## Project Structure
 ```
 # Project structure will be updated as development progresses

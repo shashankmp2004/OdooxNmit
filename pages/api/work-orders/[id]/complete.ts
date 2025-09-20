@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { consumeStockForMO } from "@/lib/stock";
+import { getRoutingForProduct, resolveWorkCenterIdByName, findStepIndex } from "@/lib/routing";
 import { socketService } from "@/lib/socket";
 
 export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) => {
@@ -74,6 +75,7 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
 
     let updatedMO = null;
     let stockConsumptionResult = null;
+    let nextWorkOrder = null;
     
     if (allCompleted) {
       // Complete the manufacturing order and handle stock consumption
@@ -93,6 +95,37 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
           error: "Manufacturing order completed but stock consumption failed",
           details: stockError instanceof Error ? stockError.message : "Unknown stock error"
         });
+      }
+    }
+    else {
+      // Not all WOs are completed; try to auto-create next step WO based on routing
+      const route = await getRoutingForProduct(wo.mo.productId);
+      // Determine current step from the completed WO's taskName or title
+      const currentName = wo.taskName || wo.title;
+      const idx = findStepIndex(route, currentName);
+      if (idx >= 0 && idx < route.length - 1) {
+        const nextStep = route[idx + 1];
+        // Only create next WO if it doesn't already exist
+        const existingNext = await prisma.workOrder.findFirst({
+          where: { moId: wo.moId, taskName: { equals: nextStep, mode: "insensitive" } },
+          select: { id: true }
+        });
+        if (!existingNext) {
+          const wcId = await resolveWorkCenterIdByName(nextStep);
+          nextWorkOrder = await prisma.workOrder.create({
+            data: {
+              moId: wo.moId,
+              title: `${nextStep} - ${wo.mo.name}`,
+              taskName: nextStep,
+              status: "PENDING",
+              priority: wo.priority,
+              workCenterId: wcId,
+            },
+            include: {
+              mo: true
+            }
+          });
+        }
       }
     }
 
@@ -118,7 +151,8 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
       workOrder: updatedWO,
       manufacturingOrderCompleted: allCompleted,
       manufacturingOrder: updatedMO,
-      stockConsumption: stockConsumptionResult
+      stockConsumption: stockConsumptionResult,
+      nextWorkOrder
     });
   } catch (error) {
     console.error("Work Order COMPLETE error:", error);
