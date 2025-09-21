@@ -49,6 +49,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export default function LandingPage() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const { data: session, status } = useSession();
+  const [hasSessionCookie, setHasSessionCookie] = React.useState(false)
 
   useEffect(() => {
     // Create intersection observer for scroll animations
@@ -94,6 +95,17 @@ export default function LandingPage() {
       }
     };
   }, []);
+
+  // Detect next-auth cookie early to avoid CTA flicker
+  useEffect(() => {
+    try {
+      const cookies = typeof document !== 'undefined' ? document.cookie : ''
+      const hasCookie = /(?:^|;\s)(__Secure-next-auth\.session-token|next-auth\.session-token)=/.test(cookies)
+      setHasSessionCookie(hasCookie)
+    } catch {}
+  }, [])
+
+  const isAuthed = status === 'authenticated' || hasSessionCookie
 
   const benefits = [
     {
@@ -256,7 +268,7 @@ export default function LandingPage() {
               >
                 About
               </Link>
-              {status === "authenticated" ? (
+              {isAuthed && session ? (
                 <>
                   <ThemeToggle />
                   <DropdownMenu>
@@ -355,7 +367,7 @@ export default function LandingPage() {
                     <Link href="/auth?mode=login">Sign In</Link>
                   </Button>
                   <Button asChild size="sm">
-                    <Link href="/auth?mode=signup">Get Started</Link>
+                    <Link href="/signup">Get Started</Link>
                   </Button>
                 </>
               )}
@@ -381,7 +393,7 @@ export default function LandingPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
       >
-        <Hero />
+  <Hero isAuthed={isAuthed} />
       </motion.div>
 
       {/* Stats Section */}
@@ -615,8 +627,8 @@ export default function LandingPage() {
               transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
             >
               <Button asChild size="lg" className="h-12 px-8">
-                <Link href="/auth?mode=signup">
-                  Start Free Trial
+                <Link href={isAuthed ? "/dashboard" : "/signup"}>
+                  {isAuthed ? "Go to Dashboard" : "Start Free Trial"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
