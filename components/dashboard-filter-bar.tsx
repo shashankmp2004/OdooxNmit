@@ -28,7 +28,7 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
           setSearch(e.target.value)
           onSearchChange?.(e.target.value)
         }}
-        className="bg-background border-input h-10 w-56"
+        className="bg-background border border-gray-200 dark:border-gray-600 h-10 w-56"
       />
 
       <Select
@@ -38,7 +38,7 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
           onStatusChange?.(v)
         }}
       >
-        <SelectTrigger className="bg-background border-input h-10 w-40">
+        <SelectTrigger className="bg-background border border-gray-200 dark:border-gray-600 h-10 w-40 [&[data-size=default]]:h-10">
           <Filter className="mr-2 h-4 w-4" />
           <SelectValue placeholder="All Status" />
         </SelectTrigger>
