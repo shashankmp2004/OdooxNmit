@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { consumeStockForMO } from "@/lib/stock";
 import { getRoutingForProduct, resolveWorkCenterIdByName, findStepIndex } from "@/lib/routing";
 import { socketService } from "@/lib/socket";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) => {
   const { id } = req.query;
@@ -18,6 +19,11 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
   }
 
   try {
+    // Rate limit per IP per WO complete
+    const ip = getClientIp(req as any);
+    const rl = checkRateLimit(`wo:complete:${id}:${ip}`, 10, 60 * 1000);
+    rateLimitResponse(res, rl.remaining, rl.resetAt);
+    if (!rl.allowed) return res.status(429).json({ error: "Too many complete attempts, slow down" });
     // Get work order with permissions check
     const wo = await prisma.workOrder.findUnique({
       where: { id },

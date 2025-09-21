@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { socketService } from "@/lib/socket";
 import { checkMaterialAvailability } from "@/lib/stock";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) => {
   const { id } = req.query;
@@ -17,6 +18,11 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
   }
 
   try {
+    // Rate limit per IP per WO start
+    const ip = getClientIp(req as any);
+    const rl = checkRateLimit(`wo:start:${id}:${ip}`, 10, 60 * 1000);
+    rateLimitResponse(res, rl.remaining, rl.resetAt);
+    if (!rl.allowed) return res.status(429).json({ error: "Too many start attempts, slow down" });
     // Get work order with permissions check
     const wo = await prisma.workOrder.findUnique({
       where: { id },
