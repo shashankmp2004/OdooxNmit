@@ -1,5 +1,13 @@
 # ManufactureOS — From Order To Output, In One Flow
 
+**Team Name:** Fullmetal Hackmists
+
+## Team Members
+1. Shashank Padanad
+2. Ishan Gupta
+3. Maurya C R
+4. Mohit Patil
+
 Modern manufacturing management system built with Next.js 14 App Router. It covers orders, BOMs, work centers, work orders, inventory, analytics, and real‑time ops visibility.
 
 ## Demo video
@@ -123,6 +131,4 @@ Endpoints (examples):
 - Prisma type mismatches: `npm run db:generate` then restart TypeScript server
 - Socket.IO not connecting: ensure API route initialized and user is authenticated
 
-## License
-MIT
 
