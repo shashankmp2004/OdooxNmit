@@ -33,9 +33,10 @@ interface ManufacturingOrdersTableProps {
   userRole?: string
   startDate?: Date
   endDate?: Date
+  readyOnly?: boolean
 }
 
-export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole = "OPERATOR", startDate, endDate }: ManufacturingOrdersTableProps) {
+export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole = "OPERATOR", startDate, endDate, readyOnly = false }: ManufacturingOrdersTableProps) {
   const [orders, setOrders] = useState<ManufacturingOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -91,7 +92,10 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
       }
     }
 
-    return matchesStatus && matchesSearch && matchesDateRange
+    // Materials readiness filter
+    const matchesReady = !readyOnly || order.canProduce === true
+
+    return matchesStatus && matchesSearch && matchesDateRange && matchesReady
   })
 
   const getStatusColor = (state: string) => {
