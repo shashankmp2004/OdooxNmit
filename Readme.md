@@ -29,6 +29,64 @@ Modern manufacturing management system built with Next.js 14 App Router. It cove
 - Socket.IO for real‑time
 - Zod, date-fns, XLSX, pdfkit (PDF), sonner, lucide-react
 
+```mermaid
+erDiagram
+    User ||--o{ ManufacturingOrder : creates
+    User ||--o{ WorkOrder : assigned_to
+    Product ||--o{ BOM : has
+    Product ||--o{ StockEntry : tracks
+    BOM ||--o{ BOMComponent : contains
+    ManufacturingOrder ||--o{ WorkOrder : generates
+    WorkCenter ||--o{ WorkOrder : hosts
+    Product ||--o{ ManufacturingOrder : produces
+
+    User {
+        string id PK
+        string email UK
+        UserRole role
+        string password
+        datetime created_at
+    }
+    
+    Product {
+        string id PK
+        string sku UK
+        string name
+        string category
+        float stock
+        boolean is_finished
+    }
+    
+    ManufacturingOrder {
+        string id PK
+        string order_no UK
+        string product_id FK
+        int quantity
+        OrderState state
+        datetime deadline
+        json bom_snapshot
+    }
+    
+    WorkOrder {
+        string id PK
+        string mo_id FK
+        string title
+        WorkStatus status
+        int progress
+        float estimated_time
+    }
+    
+    StockEntry {
+        string id PK
+        string product_id FK
+        StockEntryType type
+        float quantity
+        float change
+        datetime created_at
+    }
+```
+
+
 ## Quick Start (Windows PowerShell)
 1) Prereqs
 - Node.js 18+ and pnpm or npm
