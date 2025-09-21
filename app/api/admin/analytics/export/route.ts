@@ -1,7 +1,4 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/pages/api/auth/[...nextauth]'
 
 // Ensure this route always runs on the Node.js runtime and is never statically prerendered
 export const runtime = 'nodejs'
@@ -11,6 +8,12 @@ export const fetchCache = 'force-no-store'
 
 export async function GET() {
   try {
+    // Lazily import auth and prisma to avoid build-time evaluation issues on Vercel
+    const [{ getServerSession }, { authOptions }, { prisma }] = await Promise.all([
+      import('next-auth'),
+      import('@/pages/api/auth/[...nextauth]'),
+      import('@/lib/prisma'),
+    ])
     const session = await getServerSession(authOptions)
     if (!session || session.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

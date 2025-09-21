@@ -8,7 +8,7 @@ import Typewriter from "typewriter-effect";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export const Hero = () => {
+export const Hero = ({ isAuthed = false }: { isAuthed?: boolean }) => {
   return (
     <section className="relative py-32 bg-background overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -52,8 +52,8 @@ export const Hero = () => {
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
               <Button asChild size="lg" className="h-12 px-8">
-                <Link href="/auth?mode=signup">
-                  Get Started
+                <Link href={isAuthed ? "/dashboard" : "/signup"}>
+                  {isAuthed ? "Go to Dashboard" : "Get Started"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

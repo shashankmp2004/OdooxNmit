@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,9 @@ export default function AuthPage() {
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [hasSessionCookie, setHasSessionCookie] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status } = useSession();
 
   useEffect(() => {
@@ -34,6 +36,25 @@ export default function AuthPage() {
       if (savedEmail) setFormData((p) => ({ ...p, email: savedEmail }));
     } catch {}
   }, []);
+
+  // If mode=signup is present, redirect to the dedicated signup page
+  useEffect(() => {
+    const mode = searchParams?.get("mode");
+    if (mode === "signup") {
+      router.replace("/signup");
+    }
+  }, [searchParams, router]);
+
+  // Detect next-auth session cookie to immediately reflect logged-in state (prevents CTA flicker)
+  useEffect(() => {
+    try {
+      const cookies = typeof document !== 'undefined' ? document.cookie : ''
+      const hasCookie = /(?:^|;\s)(__Secure-next-auth\.session-token|next-auth\.session-token)=/.test(cookies)
+      setHasSessionCookie(hasCookie)
+    } catch {}
+  }, [])
+
+  const isAuthed = status === "authenticated" || hasSessionCookie
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,16 +117,22 @@ export default function AuthPage() {
                   <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="h-4 w-4" />
                   <span>Remember this device</span>
                 </label>
-                {status === "authenticated" && <Button type="button" variant="secondary" onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>}
+                {isAuthed && <Button type="button" variant="secondary" onClick={() => router.push("/dashboard")}>Go to Dashboard</Button>}
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : status === "authenticated" ? "Continue" : "Sign In"}
+                {isLoading ? "Signing in..." : isAuthed ? "Continue" : "Sign In"}
               </Button>
 
-              <div className="text-center text-sm text-muted-foreground">
-                Don&apos;t have an account? <Link className="underline hover:text-foreground" href="/signup">Create one</Link>
-              </div>
+              {!isAuthed ? (
+                <div className="text-center text-sm text-muted-foreground">
+                  Don&apos;t have an account? <Link className="underline hover:text-foreground" href="/signup">Create one</Link>
+                </div>
+              ) : (
+                <div className="text-center text-sm text-muted-foreground">
+                  You&apos;re already signed in. <button className="underline hover:text-foreground" onClick={() => router.push('/dashboard')}>Go to Dashboard</button>
+                </div>
+              )}
             </form>
             {/* Demo Accounts */}
             <div className="mt-6 pt-4 border-t border-border">
