@@ -1,46 +1,53 @@
-"use client"
+"use client";
 
-import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Sidebar } from "@/components/admin/admin-sidebar"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Home } from "lucide-react"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Sidebar } from "@/components/admin/admin-sidebar";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Home } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AdminLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "loading") return // Still loading
+    if (status === "loading") return; // Still loading
 
     if (!session) {
-      router.push("/auth")
-      return
+      router.push("/auth");
+      return;
     }
 
     if (session.user?.role !== "ADMIN") {
-      router.push("/dashboard")
-      return
+      router.push("/dashboard");
+      return;
     }
 
-    setIsLoading(false)
-  }, [session, status, router])
+    setIsLoading(false);
+  }, [session, status, router]);
 
   if (isLoading || status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <LoadingSpinner />
       </div>
-    )
+    );
   }
 
   if (!session || session.user?.role !== "ADMIN") {
@@ -55,7 +62,7 @@ export default function AdminLayout({
           </CardHeader>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -73,12 +80,13 @@ export default function AdminLayout({
                 </Button>
               </Link>
             </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
-        <div className="container mx-auto p-6">
-          {children}
-        </div>
+        <div className="container mx-auto p-6">{children}</div>
       </main>
     </div>
-  )
+  );
 }
