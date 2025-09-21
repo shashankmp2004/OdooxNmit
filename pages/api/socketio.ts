@@ -1,8 +1,8 @@
 import { Server as NetServer } from 'http';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Server as SocketIOServer } from 'socket.io';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from './auth/[...nextauth]';
+import { getToken } from 'next-auth/jwt';
+import { socketService } from '@/lib/socket';
 
 export const config = {
   api: {
@@ -44,18 +44,23 @@ const SocketHandler = async (req: NextApiRequest, res: SocketApiResponse) => {
   // Authentication middleware for Socket.io
   io.use(async (socket: any, next) => {
     try {
-      const session = await getServerSession(req, res, authOptions);
-      
-      if (!session?.user) {
+      // Prefer stateless auth: read NextAuth JWT from cookies on the Socket handshake request
+      const token = await getToken({
+        // socket.request is an IncomingMessage and acceptable here
+        req: socket.request as any,
+        secret: process.env.NEXTAUTH_SECRET,
+      });
+
+      if (!token || !token.sub) {
         return next(new Error('Authentication required'));
       }
 
       // Store user data in socket
       socket.data = {
-        userId: session.user.id,
-        userRole: session.user.role,
-        userName: session.user.name
-      };
+        userId: (token as any).id || token.sub,
+        userRole: (token as any).role,
+        userName: (token as any).name || '',
+      } as SocketData;
 
       next();
     } catch (error) {
@@ -107,7 +112,10 @@ const SocketHandler = async (req: NextApiRequest, res: SocketApiResponse) => {
     });
   });
 
+  // Expose the io instance to the Next.js server and to our emitter service
   res.socket.server.io = io;
+  ;(global as any).io = io;
+  socketService.setIO(io);
   res.end();
 };
 

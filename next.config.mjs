@@ -11,7 +11,7 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   experimental: {
-    serverComponentsExternalPackages: ['socket.io'],
+    serverComponentsExternalPackages: ['socket.io', 'pdfkit', 'fontkit'],
   },
   webpack: (config) => {
     config.externals.push({

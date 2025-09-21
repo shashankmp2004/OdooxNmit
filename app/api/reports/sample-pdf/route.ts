@@ -5,9 +5,9 @@ export const runtime = 'nodejs'
 
 export async function GET() {
   try {
-    // Use pdfkit for a valid PDF
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const PDFDocument = require('pdfkit')
+    // Dynamically import pdfkit to work in ESM context
+    const pdfkit = await import('pdfkit')
+    const PDFDocument: any = (pdfkit as any).default ?? (pdfkit as any)
     const chunks: Buffer[] = []
     const doc = new PDFDocument({ margin: 40, size: 'A4' })
     doc.on('data', (chunk: Buffer) => chunks.push(chunk))

@@ -171,25 +171,18 @@ export async function middleware(req: NextRequest) {
   // CSRF protection for non-idempotent API methods: require same-origin
   if (pathname.startsWith("/api") && NON_IDEMPOTENT_METHODS.has(req.method)) {
     const origin = req.headers.get("origin");
-    const host = req.headers.get("host") || "";
-    const url = req.nextUrl;
-    const sameHost = host.toLowerCase();
-    // Allow when origin is absent (e.g., same-origin form posts or curl) and request host matches
-    // Otherwise, require exact match of origin host to request host.
+    const host = req.headers.get("host")?.toLowerCase();
     let ok = false;
     if (!origin) {
-      ok = !!sameHost;
-    } else {
+      // No Origin header: allow only if we have a valid host (same-origin navigation or curl)
+      ok = Boolean(host);
+    } else if (host) {
       try {
         const o = new URL(origin);
-        // In dev, allow localhost/127.0.0.1 equivalence
-        const originHost = o.host.toLowerCase();
-        if (process.env.NODE_ENV !== "production") {
-          const normalize = (h: string) => h.replace("127.0.0.1", "localhost");
-          ok = normalize(originHost) === normalize(sameHost);
-        } else {
-          ok = originHost === sameHost;
-        }
+        // Compare full host:port, normalize 127.0.0.1 <-> localhost in dev
+        const normalize = (h: string) =>
+          process.env.NODE_ENV !== "production" ? h.replace("127.0.0.1", "localhost") : h;
+        ok = normalize(o.host.toLowerCase()) === normalize(host);
       } catch {
         ok = false;
       }
