@@ -114,7 +114,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-y-scroll no-scrollbar">
+    <div className="min-h-screen bg-background">
       {/* Animation Styles */}
       <style jsx global>{`
         html {
