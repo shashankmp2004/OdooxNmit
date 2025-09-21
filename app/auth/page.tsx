@@ -199,30 +199,12 @@ export default function AuthPage() {
           </CardContent>
         </Card>
 
-        {/* Simple Sign Up (stacked below sign in) */}
-        <Card className="border border-border bg-card rounded-2xl shadow">
-          <CardHeader>
-            <CardTitle className="text-left text-xl font-semibold">Sign Up</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSignup} className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" name="name" placeholder="Your name" value={signup.name} onChange={handleSignupChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <Input id="signup-email" name="email" type="email" placeholder="you@example.com" value={signup.email} onChange={handleSignupChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                <Input id="signup-password" name="password" type="password" placeholder="Create a password" value={signup.password} onChange={handleSignupChange} required />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>Create Account</Button>
-              <p className="text-xs text-muted-foreground">No email verification. Accounts default to OPERATOR role. Admin can later update roles.</p>
-            </form>
-          </CardContent>
-        </Card>
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">Don’t have an account?</p>
+          <Link href="/signup">
+            <Button variant="secondary" className="mt-2">Create an account</Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
