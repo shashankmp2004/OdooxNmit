@@ -179,7 +179,7 @@ export default function BOMPage() {
         throw new Error(err?.error || `Failed to create Manufacturing Order (${moRes.status})`)
       }
 
-      const mo = await moRes.json()
+  const mo = await moRes.json()
 
       // 2) Create a Work Order linked to the MO. Use BOM's estimatedTime if provided (>0)
       const woPayload: any = {
@@ -210,7 +210,7 @@ export default function BOMPage() {
 
       toast({
         title: "BOM + Work Order Created",
-        description: `BOM ID: ${bomId}. Work Order ID: ${wo.id}.`,
+        description: `BOM ID: ${bomId}. MO: ${mo.orderNo || mo.id}. WO: ${wo.id}.`,
       })
     } catch (e: any) {
       console.error('Error creating MO/WO from BOM:', e)

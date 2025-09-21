@@ -47,12 +47,14 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
       ? Math.round((endTime.getTime() - new Date(wo.startTime).getTime()) / (1000 * 60))
       : null;
 
+    const additionalHours = durationMin ? durationMin / 60 : 0;
     const updatedWO = await prisma.workOrder.update({
       where: { id },
       data: {
         status: "COMPLETED",
         endTime,
-        durationMin
+        durationMin,
+        actualTime: (wo.actualTime || 0) + additionalHours
       },
       include: {
         mo: {

@@ -81,6 +81,8 @@ export default function ReportsPage() {
     products: Array<{id: string, name: string, sku: string}>
     workCenters: Array<{id: string, name: string}>
   }>({ products: [], workCenters: [] })
+  const [importPreview, setImportPreview] = useState<any[]>([])
+  const [importSummary, setImportSummary] = useState<string>("")
   
   const { toast } = useToast()
   const { data: session } = useAuth()
@@ -206,8 +208,22 @@ export default function ReportsPage() {
         title: "File Upload Successful",
         description: `Processed ${result.recordCount} records from ${result.filename}`,
       })
-      
-      // Optionally refresh analytics data here
+      // Show preview
+      setImportPreview(Array.isArray(result.preview) ? result.preview : [])
+      setImportSummary(result.message || '')
+
+      // Refresh analytics data to reflect newly imported records
+      const [ordersRes, utilizationRes, productionRes, summaryRes] = await Promise.all([
+        fetch("/api/analytics/orders"),
+        fetch("/api/analytics/utilization"),
+        fetch("/api/analytics/production"),
+        fetch("/api/analytics/summary"),
+      ])
+
+      if (ordersRes.ok) setOrdersData(await ordersRes.json())
+      if (utilizationRes.ok) setUtilizationData(await utilizationRes.json())
+      if (productionRes.ok) setProductionData(await productionRes.json())
+      if (summaryRes.ok) setAnalyticsData(await summaryRes.json())
       
     } catch (error) {
       console.error('Upload error:', error)
@@ -396,6 +412,59 @@ export default function ReportsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Import Preview */}
+              {importPreview.length > 0 && (
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-foreground flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Import Preview (first {importPreview.length} rows)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {importSummary && (
+                      <p className="text-sm text-muted-foreground mb-3">{importSummary}</p>
+                    )}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-muted-foreground border-b border-border">
+                            <th className="py-2 pr-4">Date</th>
+                            <th className="py-2 pr-4">Work Center</th>
+                            <th className="py-2 pr-4">Product</th>
+                            <th className="py-2 pr-4">Order ID</th>
+                            <th className="py-2 pr-4">Status</th>
+                            <th className="py-2 pr-4">Qty</th>
+                            <th className="py-2 pr-4">Completed</th>
+                            <th className="py-2 pr-4">Lead Time (days)</th>
+                            <th className="py-2 pr-4">Efficiency (%)</th>
+                            <th className="py-2 pr-4">Defect Rate (%)</th>
+                            <th className="py-2 pr-0">Cost ($)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importPreview.map((row, idx) => (
+                            <tr key={idx} className="border-b border-border/60">
+                              <td className="py-2 pr-4">{row.date}</td>
+                              <td className="py-2 pr-4">{row.workCenter}</td>
+                              <td className="py-2 pr-4">{row.product}</td>
+                              <td className="py-2 pr-4">{row.orderId}</td>
+                              <td className="py-2 pr-4">{row.status}</td>
+                              <td className="py-2 pr-4">{row.quantity}</td>
+                              <td className="py-2 pr-4">{row.completedQuantity}</td>
+                              <td className="py-2 pr-4">{row.leadTime}</td>
+                              <td className="py-2 pr-4">{row.efficiency}</td>
+                              <td className="py-2 pr-4">{row.defectRate}</td>
+                              <td className="py-2 pr-0">{row.cost}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Charts Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

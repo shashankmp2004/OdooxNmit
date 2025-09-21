@@ -162,18 +162,20 @@ export function Sidebar({ userRole = "MANAGER" }: SidebarProps) {
 
       {/* Settings and Logout */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
-  <Link href="/settings" className="no-underline">
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              collapsed && "px-2",
-            )}
-          >
-            <Settings className="h-4 w-4 flex-shrink-0" />
-            {!collapsed && <span>Settings</span>}
-          </Button>
-        </Link>
+        {(currentRole === 'ADMIN' || currentRole === 'MANAGER') && (
+          <Link href="/settings" className="no-underline">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                collapsed && "px-2",
+              )}
+            >
+              <Settings className="h-4 w-4 flex-shrink-0" />
+              {!collapsed && <span>Settings</span>}
+            </Button>
+          </Link>
+        )}
 
         <SignoutDialog>
           <Button

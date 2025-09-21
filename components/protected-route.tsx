@@ -31,7 +31,9 @@ export function ProtectedRoute({
     if (allowedRoles.length > 0) {
       const userRole = session.user?.role
       if (!userRole || (!allowedRoles.includes(userRole) && userRole !== "ADMIN")) {
-        router.push("/dashboard") // Redirect to dashboard if no permission
+        // Redirect to a role-appropriate default page
+        const fallback = userRole === 'OPERATOR' ? '/work-orders' : '/dashboard'
+        router.push(fallback)
         return
       }
     }

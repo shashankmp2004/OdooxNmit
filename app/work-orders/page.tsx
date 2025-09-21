@@ -50,6 +50,7 @@ export default function WorkOrdersPage() {
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [issueDialogOpen, setIssueDialogOpen] = useState(false)
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState("")
+  const [tick, setTick] = useState(0)
   const { toast } = useToast()
   const { data: session } = useAuth()
   const user = session?.user
@@ -78,6 +79,12 @@ export default function WorkOrdersPage() {
     }
 
     fetchWorkOrders()
+  }, [])
+
+  // Tick every 15s to update time-based progress bars
+  useEffect(() => {
+    const i = setInterval(() => setTick((t) => t + 1), 15000)
+    return () => clearInterval(i)
   }, [])
 
   const filteredWorkOrders = (Array.isArray(workOrders) ? workOrders : []).filter((order: any) => {
@@ -136,7 +143,16 @@ export default function WorkOrdersPage() {
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to update work order: ${response.statusText}`);
+        let errText = `Failed to update work order: ${response.statusText}`;
+        try {
+          const err = await response.json();
+          if (err?.error) errText = err.error;
+          if (err?.shortages) {
+            const s = Array.isArray(err.shortages) ? err.shortages.map((x: any) => `${x.materialName || x.materialId}: need ${x.required}, have ${x.available}`).join("; ") : "";
+            if (s) errText += ` — Shortages: ${s}`;
+          }
+        } catch {}
+        throw new Error(errText);
       }
 
       const payload = await response.json();
@@ -156,11 +172,11 @@ export default function WorkOrdersPage() {
         description: `Work order status changed to ${newStatus}`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating work order:', error);
       toast({
         title: "Error",
-        description: "Failed to update work order status",
+        description: error?.message || "Failed to update work order status",
         variant: "destructive",
       });
     }
@@ -177,7 +193,12 @@ export default function WorkOrdersPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update progress: ${response.statusText}`);
+        let errText = `Failed to update progress: ${response.statusText}`;
+        try {
+          const err = await response.json();
+          if (err?.error) errText = err.error;
+        } catch {}
+        throw new Error(errText);
       }
 
   const payload = await response.json();
@@ -197,11 +218,11 @@ export default function WorkOrdersPage() {
         description: `Work order progress set to ${progress}%`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating progress:', error);
       toast({
         title: "Error",
-        description: "Failed to update work order progress",
+        description: error?.message || "Failed to update work order progress",
         variant: "destructive",
       });
     }
@@ -228,10 +249,10 @@ export default function WorkOrdersPage() {
   const getStatusCounts = () => {
     const safeWorkOrders = Array.isArray(workOrders) ? workOrders : []
     return {
-      pending: safeWorkOrders.filter((o) => o.state === "PENDING").length,
-      inProgress: safeWorkOrders.filter((o) => o.state === "IN_PROGRESS").length,
-      completed: safeWorkOrders.filter((o) => o.state === "COMPLETED").length,
-      blocked: safeWorkOrders.filter((o) => o.state === "BLOCKED").length,
+      pending: safeWorkOrders.filter((o: any) => o.status === "PENDING").length,
+      inProgress: safeWorkOrders.filter((o: any) => o.status === "STARTED" || o.status === "PAUSED").length,
+      completed: safeWorkOrders.filter((o: any) => o.status === "COMPLETED").length,
+      blocked: safeWorkOrders.filter((o: any) => o.status === "BLOCKED").length,
     }
   }
 
@@ -363,7 +384,18 @@ export default function WorkOrdersPage() {
                               </div>
                               <Progress value={computeTimeProgress(workOrder)} className="h-2" />
                               <p className="text-xs text-muted-foreground">
-                                Est: {workOrder.estimatedTime}h
+                                Est: {Number(workOrder.estimatedTime).toFixed(2)}h · ETA: {(() => {
+                                  const est = Number(workOrder.estimatedTime);
+                                  if (!est || !workOrder.startTime) return '—';
+                                  const elapsedHrs = (Date.now() - new Date(workOrder.startTime).getTime()) / (1000 * 60 * 60);
+                                  const remainingHrs = Math.max(0, est - elapsedHrs);
+                                  const mins = Math.round(remainingHrs * 60);
+                                  if (mins <= 0) return 'now';
+                                  if (mins < 60) return `${mins} min`;
+                                  const hrs = Math.floor(mins / 60);
+                                  const rem = mins % 60;
+                                  return `${hrs}h${rem ? ` ${rem}m` : ''}`;
+                                })()}
                               </p>
                             </>
                           ) : (
