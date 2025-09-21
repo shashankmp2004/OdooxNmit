@@ -149,13 +149,15 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
         <Download className="mr-2 h-4 w-4" />
         Export
       </Button>
-      <Button
-        onClick={onNewOrderClick}
-        className="h-10 bg-primary text-primary-foreground hover:bg-primary/90"
-      >
-        <Plus className="mr-2 h-4 w-4" />
-        New Order
-      </Button>
+      {onNewOrderClick && (
+        <Button
+          onClick={onNewOrderClick}
+          className="h-10 bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New Order
+        </Button>
+      )}
     </>
   )
 

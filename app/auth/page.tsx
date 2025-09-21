@@ -50,7 +50,18 @@ export default function AuthPage() {
         if (remember) localStorage.setItem("mf_email", formData.email);
         else localStorage.removeItem("mf_email");
         toast.success("Signed in successfully!");
-        router.push("/dashboard");
+        // After sign in, route based on role
+        setTimeout(() => {
+          const role = (document as any)?.cookie?.includes('next-auth') ? undefined : undefined;
+          // Fetch session from useSession would lag on immediate redirect; query a lightweight endpoint
+          fetch('/api/auth/me').then(async r => {
+            const j = await r.json().catch(() => null);
+            const userRole = j?.user?.role;
+            if (userRole === 'INVENTORY') router.push('/stock-ledger');
+            else if (userRole === 'OPERATOR') router.push('/work-orders');
+            else router.push('/dashboard');
+          }).catch(() => router.push('/dashboard'));
+        }, 50);
       }
     } catch { toast.error("Sign in error"); }
     finally { setIsLoading(false); }
