@@ -83,9 +83,12 @@ export const Hero = () => {
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-end animate-fade-in">
             <Image
               src="/banner.png"
-              alt="ManufactureOS Banner"
-              width={600}
-              height={400}
+              alt="ManufactureOS platform illustration banner"
+              width={300}
+              height={200}
+              quality={70}
+              sizes="(min-width: 1024px) 400px, 100vw"
+              priority
               className="rounded-2xl object-cover shadow-lg"
             />
           </div>

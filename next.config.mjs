@@ -7,7 +7,8 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    // Enable Next.js Image Optimization for smaller payloads
+    formats: ["image/avif", "image/webp"],
   },
   experimental: {
     serverComponentsExternalPackages: ['socket.io'],

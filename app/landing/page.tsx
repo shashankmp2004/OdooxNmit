@@ -101,7 +101,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-y-scroll no-scrollbar">
       {/* Animation Styles */}
       <style jsx global>{`
         html {
@@ -304,6 +304,7 @@ export default function LandingPage() {
                 </>
               ) : (
                 <>
+                  <ThemeToggle />
                   <Button asChild variant="outline" size="sm">
                     <Link href="/auth?mode=login">Sign In</Link>
                   </Button>
@@ -312,6 +313,16 @@ export default function LandingPage() {
                   </Button>
                 </>
               )}
+            </motion.div>
+
+            {/* Mobile controls: always show theme toggle */}
+            <motion.div
+              className="md:hidden flex items-center space-x-2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <ThemeToggle />
             </motion.div>
           </div>
         </div>

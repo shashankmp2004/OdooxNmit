@@ -139,6 +139,16 @@
   }
 }
 
+/* Smooth theme transition */
+html.theme-transition *, html.theme-transition :before, html.theme-transition :after {
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, fill 250ms ease, stroke 250ms ease, box-shadow 250ms ease !important;
+}
+
+/* Optional: slightly longer transitions for cards and nav */
+html.theme-transition .card, html.theme-transition nav, html.theme-transition header, html.theme-transition .btn {
+  transition-duration: 320ms !important;
+}
+
 .scroll-fade {
   opacity: 0;
   transform: translateY(10px);
@@ -186,4 +196,13 @@
   a:not(.no-underline):not([role="button"]):not(.btn):not(button):not(.inline-flex):not(.flex):focus-visible {
     background-size: 100% 1px;
   }
+}
+
+/* Utility: hide scrollbar but allow scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }

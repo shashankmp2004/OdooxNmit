@@ -69,7 +69,9 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/static") ||
     pathname.startsWith("/images") ||
-    pathname.startsWith("/favicon")
+    pathname.startsWith("/favicon") ||
+    // Allow root-level public assets like /banner.png, /logo.svg, etc.
+    /\.(png|jpe?g|gif|svg|webp|ico|bmp|tiff|avif)$/i.test(pathname)
   ) {
     return res;
   }
