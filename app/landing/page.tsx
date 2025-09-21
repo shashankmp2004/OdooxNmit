@@ -268,7 +268,7 @@ export default function LandingPage() {
               >
                 About
               </Link>
-              {isAuthed ? (
+              {isAuthed && session ? (
                 <>
                   <ThemeToggle />
                   <DropdownMenu>

@@ -1,24 +1,22 @@
-"use client"
-
-import { useAuth } from "@/components/auth-provider"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
 export default function HomePage() {
-  const { user, isLoading } = useAuth()
+  const { data: session, status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
+    if (status !== "loading") {
+      if (!session) {
         router.push("/landing")
       } else {
         router.push("/dashboard")
       }
     }
-  }, [user, isLoading, router])
+  }, [session, status, router])
 
-  if (isLoading) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
