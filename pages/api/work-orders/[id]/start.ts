@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { socketService } from "@/lib/socket";
+import { checkMaterialAvailability } from "@/lib/stock";
 
 export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) => {
   const { id } = req.query;
@@ -42,6 +43,20 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
     // Check if MO is not completed/canceled
     if (wo.mo.state === "DONE" || wo.mo.state === "CANCELED") {
       return res.status(400).json({ error: "Cannot start work order for completed/canceled manufacturing order" });
+    }
+
+    // Ensure materials available before starting the first step
+    try {
+      const availability = await checkMaterialAvailability(wo.moId);
+      if (!availability.canProduce) {
+        return res.status(400).json({
+          error: "Insufficient materials to start this work order",
+          shortages: availability.shortages
+        });
+      }
+    } catch (_) {
+      // If check fails, allow start but log warning
+      console.warn("Material availability check failed; proceeding to start WO.");
     }
 
     const updatedWO = await prisma.workOrder.update({

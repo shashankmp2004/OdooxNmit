@@ -2,6 +2,8 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { getRoutingForProduct, resolveWorkCenterIdByName } from "@/lib/routing";
+import { checkMaterialAvailability } from "@/lib/stock";
+import type { PrismaClient } from "@prisma/client";
 
 const createMOSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -81,13 +83,14 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           prisma.manufacturingOrder.count({ where })
         ]);
 
-        // Calculate completion status for each MO
+        // Calculate completion status and material availability for each MO
         const mosWithStatus = await Promise.all(
           mos.map(async (mo: any) => {
-            const completedWOs = await prisma.workOrder.count({
-              where: { moId: mo.id, status: "COMPLETED" }
-            });
-            
+            const [completedWOs, availability] = await Promise.all([
+              prisma.workOrder.count({ where: { moId: mo.id, status: "COMPLETED" } }),
+              checkMaterialAvailability(mo.id).catch(() => ({ canProduce: false, shortages: [] } as any))
+            ]);
+
             const totalWOs = mo._count.workOrders;
             const completionPercentage = totalWOs > 0 ? (completedWOs / totalWOs) * 100 : 0;
 
@@ -95,7 +98,9 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
               ...mo,
               completionPercentage,
               completedWorkOrders: completedWOs,
-              totalWorkOrders: totalWOs
+              totalWorkOrders: totalWOs,
+              canProduce: availability?.canProduce ?? false,
+              shortagesCount: availability?.shortages?.length ?? 0
             };
           })
         );
@@ -169,35 +174,29 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
         // Generate unique order number
         const orderNo = `MO-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
-        const mo = await prisma.manufacturingOrder.create({
-          data: {
-            orderNo,
-            name: parsed.data.name,
-            productId: parsed.data.productId,
-            quantity: parsed.data.quantity,
-            deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
-            bomSnapshot,
-            createdById: req.user.id
-          },
-          include: {
-            product: true,
-            createdBy: {
-              select: { name: true, email: true }
-            },
-            workOrders: true
-          }
-        });
+        // Compute routing up front
+        const route = await getRoutingForProduct(parsed.data.productId);
 
-        // Auto-generate initial Work Orders based on routing
-        try {
-          const route = await getRoutingForProduct(mo.productId);
+        // Create MO and initial WOs atomically
+  const created = await prisma.$transaction(async (tx: PrismaClient) => {
+          const createdMO = await tx.manufacturingOrder.create({
+            data: {
+              orderNo,
+              name: parsed.data.name,
+              productId: parsed.data.productId,
+              quantity: parsed.data.quantity,
+              deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
+              bomSnapshot,
+              createdById: req.user.id,
+            },
+          });
           if (route.length > 0) {
             for (const step of route) {
               const wcId = await resolveWorkCenterIdByName(step);
-              await prisma.workOrder.create({
+              await tx.workOrder.create({
                 data: {
-                  moId: mo.id,
-                  title: `${step} - ${mo.name}`,
+                  moId: createdMO.id,
+                  title: `${step} - ${parsed.data.name}`,
                   taskName: step,
                   status: "PENDING",
                   priority: "MEDIUM",
@@ -206,11 +205,20 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
               });
             }
           }
-        } catch (e) {
-          console.warn("Auto-generation of Work Orders failed:", e);
-        }
+          return createdMO.id;
+        });
 
-        return res.status(201).json(mo);
+        // Return MO with relations
+        const moFull = await prisma.manufacturingOrder.findUnique({
+          where: { id: created },
+          include: {
+            product: true,
+            createdBy: { select: { name: true, email: true } },
+            workOrders: true,
+          },
+        });
+
+        return res.status(201).json(moFull);
       } catch (error) {
         console.error("MO POST error:", error);
         return res.status(500).json({ error: "Failed to create manufacturing order" });

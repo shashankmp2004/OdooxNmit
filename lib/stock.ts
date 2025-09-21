@@ -35,8 +35,9 @@ async function emitLowStockForProducts(productIds: string[]) {
 /**
  * Get current stock balance for a product
  */
-export async function getCurrentStock(productId: string): Promise<number> {
-  const lastEntry = await prisma.stockEntry.findFirst({
+export async function getCurrentStock(productId: string, tx?: any): Promise<number> {
+  const db = tx || prisma;
+  const lastEntry = await db.stockEntry.findFirst({
     where: { productId },
     orderBy: { createdAt: "desc" }
   });
@@ -63,7 +64,7 @@ export async function getCurrentStockBatch(productIds: string[]): Promise<Record
 export async function createStockEntry(operation: StockOperation, tx?: any): Promise<any> {
   const prismaClient = tx || prisma;
   
-  const currentBalance = await getCurrentStock(operation.productId);
+  const currentBalance = await getCurrentStock(operation.productId, prismaClient);
   const newBalance = currentBalance + operation.change;
 
   if (newBalance < 0) {
@@ -157,7 +158,7 @@ export async function consumeStockForMO(moId: string): Promise<{
     // Process material consumption
     for (const component of bomSnapshot) {
       const requiredQty = component.qtyPerUnit * mo.quantity;
-      const currentStock = await getCurrentStock(component.materialId);
+  const currentStock = await getCurrentStock(component.materialId, tx);
 
       if (currentStock < requiredQty) {
         throw new Error(

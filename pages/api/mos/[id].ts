@@ -23,19 +23,7 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
         const mo = await prisma.manufacturingOrder.findUnique({
           where: { id },
           include: {
-            product: {
-              include: {
-                bom: {
-                  include: {
-                    components: {
-                      include: {
-                        material: true
-                      }
-                    }
-                  }
-                }
-              }
-            },
+            product: true,
             createdBy: {
               select: { name: true, email: true }
             },
@@ -122,10 +110,15 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           });
         }
 
-        const updateData: any = { ...parsed.data };
+  const updateData: any = { ...parsed.data };
         
         if (updateData.deadline) {
           updateData.deadline = new Date(updateData.deadline);
+        }
+
+        // If state transitions to DONE here, set completedAt; note: stock operations should normally finalize MO
+        if (updateData.state === "DONE" && !updateData.completedAt) {
+          updateData.completedAt = new Date();
         }
 
         const mo = await prisma.manufacturingOrder.update({
