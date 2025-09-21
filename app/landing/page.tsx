@@ -22,8 +22,21 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, Settings as Cog, Shield as ShieldIcon, LogOut, LayoutDashboard } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  User,
+  Settings as Cog,
+  Shield as ShieldIcon,
+  LogOut,
+  LayoutDashboard,
+} from "lucide-react";
 import { SignoutDialog } from "@/components/signout-dialog";
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
@@ -248,14 +261,29 @@ export default function LandingPage() {
                   <ThemeToggle />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-3 px-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex items-center gap-3 px-2"
+                      >
                         <Avatar className="size-7">
-                          <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? "User"} />
-                          <AvatarFallback>{(session.user?.name || session.user?.email || "U").slice(0,2).toUpperCase()}</AvatarFallback>
+                          <AvatarImage
+                            src={session.user?.image ?? undefined}
+                            alt={session.user?.name ?? "User"}
+                          />
+                          <AvatarFallback>
+                            {(session.user?.name || session.user?.email || "U")
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </AvatarFallback>
                         </Avatar>
                         <div className="hidden lg:flex flex-col items-start leading-tight">
-                          <span className="text-sm font-medium">{session.user?.name || session.user?.email}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground uppercase tracking-wide">{(session.user as any)?.role || "USER"}</span>
+                          <span className="text-sm font-medium">
+                            {session.user?.name || session.user?.email}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground uppercase tracking-wide">
+                            {(session.user as any)?.role || "USER"}
+                          </span>
                         </div>
                       </Button>
                     </DropdownMenuTrigger>
@@ -263,12 +291,27 @@ export default function LandingPage() {
                       <DropdownMenuLabel>
                         <div className="flex items-center gap-3">
                           <Avatar className="size-8">
-                            <AvatarImage src={session.user?.image ?? undefined} alt={session.user?.name ?? "User"} />
-                            <AvatarFallback>{(session.user?.name || session.user?.email || "U").slice(0,2).toUpperCase()}</AvatarFallback>
+                            <AvatarImage
+                              src={session.user?.image ?? undefined}
+                              alt={session.user?.name ?? "User"}
+                            />
+                            <AvatarFallback>
+                              {(
+                                session.user?.name ||
+                                session.user?.email ||
+                                "U"
+                              )
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <div className="font-medium truncate">{session.user?.name || session.user?.email}</div>
-                            <div className="text-xs text-muted-foreground truncate">{session.user?.email}</div>
+                            <div className="font-medium truncate">
+                              {session.user?.name || session.user?.email}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {session.user?.email}
+                            </div>
                           </div>
                         </div>
                       </DropdownMenuLabel>
@@ -295,7 +338,10 @@ export default function LandingPage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <SignoutDialog>
-                        <DropdownMenuItem onSelect={(e: Event) => e.preventDefault()} className="text-destructive">
+                        <DropdownMenuItem
+                          onSelect={(e: Event) => e.preventDefault()}
+                          className="text-destructive"
+                        >
                           <LogOut className="h-4 w-4 mr-2" /> Sign out
                         </DropdownMenuItem>
                       </SignoutDialog>
@@ -373,8 +419,13 @@ export default function LandingPage() {
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Left Column */}
             <div className="space-y-8">
-              <Card className="p-8 bg-card/50 border-border/50 backdrop-blur-md">
-                <div className="flex items-start space-x-4">
+              <Card className="relative p-8 border border-white/20 bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
+                {/* White noise overlay */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="w-full h-full opacity-[0.07] bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAACXBIWXMAAAsSAAALEgHS3X78AAAAU0lEQVR4nO3PMQEAAAQAMM5f9F3HChYk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gnkJ7MEIJmP0XZZAAAAAElFTkSuQmCC')] bg-repeat"></div>
+                </div>
+
+                <div className="flex items-start space-x-4 relative z-10">
                   <BarChart3 className="h-8 w-8 text-primary flex-shrink-0" />
                   <div>
                     <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -388,8 +439,13 @@ export default function LandingPage() {
                   </div>
                 </div>
               </Card>
-              <Card className="p-8 bg-card/50 border-border/50 backdrop-blur-md">
-                <div className="flex items-start space-x-4">
+
+              <Card className="relative p-8 border border-white/20 bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="w-full h-full opacity-[0.07] bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAACXBIWXMAAAsSAAALEgHS3X78AAAAU0lEQVR4nO3PMQEAAAQAMM5f9F3HChYk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gnkJ7MEIJmP0XZZAAAAAElFTkSuQmCC')] bg-repeat"></div>
+                </div>
+
+                <div className="flex items-start space-x-4 relative z-10">
                   <Users className="h-8 w-8 text-primary flex-shrink-0" />
                   <div>
                     <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -407,8 +463,12 @@ export default function LandingPage() {
 
             {/* Right Column */}
             <div className="relative">
-              <Card className="p-6 bg-card/30 border-border/30 backdrop-blur-md">
-                <div className="space-y-4">
+              <Card className="relative p-6 border border-white/20 bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="w-full h-full opacity-[0.07] bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAACXBIWXMAAAsSAAALEgHS3X78AAAAU0lEQVR4nO3PMQEAAAQAMM5f9F3HChYk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gnkJ7MEIJmP0XZZAAAAAElFTkSuQmCC')] bg-repeat"></div>
+                </div>
+
+                <div className="space-y-4 relative z-10">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-foreground">
                       Production Overview
