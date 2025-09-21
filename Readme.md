@@ -2,6 +2,9 @@
 
 Modern manufacturing management system built with Next.js 14 App Router. It covers orders, BOMs, work centers, work orders, inventory, analytics, and real‑time ops visibility.
 
+## Demo video
+- Watch: https://drive.google.com/file/d/1cso4_JsF3ckYW_GVsL8vayRPzzBS-Aam/view?usp=sharing
+
 ## Highlights
 - Role‑based auth (ADMIN, MANAGER, OPERATOR, INVENTORY) via NextAuth Credentials
 - App Router APIs for analytics, admin, stock, and reports
