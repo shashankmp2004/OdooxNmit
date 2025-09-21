@@ -3,6 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/pages/api/auth/[...nextauth]'
 
+// Ensure this route always runs on the Node.js runtime and is never statically prerendered
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -92,7 +98,8 @@ export async function GET() {
     return new Response(JSON.stringify(analyticsReport, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="analytics_report_${new Date().toISOString().split('T')[0]}.json"`
+        'Content-Disposition': `attachment; filename="analytics_report_${new Date().toISOString().split('T')[0]}.json"`,
+        'Cache-Control': 'no-store'
       }
     })
   } catch (error) {
