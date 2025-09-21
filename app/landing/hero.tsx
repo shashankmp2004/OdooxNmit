@@ -7,10 +7,8 @@ import { Zap, ArrowRight } from "lucide-react";
 import Typewriter from "typewriter-effect";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 
 export const Hero = () => {
-  const { status } = useSession();
   return (
     <section className="relative py-32 bg-background overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -27,14 +25,14 @@ export const Hero = () => {
 
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
               The complete platform to{" "}
-              <span className="text-primary block h-[72px] leading-[72px]">
-                {/* Fixed height wrapper */}
+              <span className="text-primary block h-[144px] leading-[72px]">
+                {/* Fixed height wrapper for two lines */}
                 <Typewriter
                   options={{
                     strings: [
-                      "Optimize Manufacturing",
-                      "Streamline Production",
-                      "Boost Efficiency",
+                      "Optimize<br>Manufacturing",
+                      "Streamline<br>Production",
+                      "Boost<br>Efficiency",
                     ],
                     autoStart: true,
                     loop: true,
@@ -53,21 +51,12 @@ export const Hero = () => {
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
-              {status === "authenticated" ? (
-                <Button asChild size="lg" className="h-12 px-8">
-                  <Link href="/dashboard">
-                    Dashboard
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              ) : (
-                <Button asChild size="lg" className="h-12 px-8">
-                  <Link href="/auth?mode=signup">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
+              <Button asChild size="lg" className="h-12 px-8">
+                <Link href="/auth?mode=signup">
+                  Get Started
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
               <Button
                 asChild
                 variant="outline"
@@ -83,12 +72,9 @@ export const Hero = () => {
           <div className="w-full lg:w-1/2 flex justify-center lg:justify-end animate-fade-in">
             <Image
               src="/banner.png"
-              alt="ManufactureOS platform illustration banner"
-              width={300}
-              height={200}
-              quality={70}
-              sizes="(min-width: 1024px) 400px, 100vw"
-              priority
+              alt="ManufactureOS Banner"
+              width={600}
+              height={400}
               className="rounded-2xl object-cover shadow-lg"
             />
           </div>
