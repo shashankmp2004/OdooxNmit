@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { KPICard } from "@/components/kpi-card"
-import { DashboardFilterBar } from "@/components/dashboard-filter-bar"
 import { ManufacturingOrdersTable } from "@/components/manufacturing-orders-table"
 import { LiveActivityFeed } from "@/components/live-activity-feed"
 import { ProtectedRoute } from "@/components/protected-route"
@@ -125,38 +124,7 @@ export default function DashboardPage() {
     }
   }
 
-  // Handlers for toolbar actions
-  const handleExport = async () => {
-    try {
-      const params = new URLSearchParams()
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
-      if (searchQuery) params.set('search', searchQuery)
-      if (startDate) params.set('startDate', startDate.toISOString())
-      if (endDate) params.set('endDate', endDate.toISOString())
-
-      const res = await fetch(`/api/mos/export?${params.toString()}`, {
-        method: 'GET'
-      })
-      if (!res.ok) throw new Error('Failed to export')
-      const blob = await res.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `manufacturing-orders-${Date.now()}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
-    } catch (e) {
-      console.error('Export error', e)
-      alert('Failed to export. Please try again.')
-    }
-  }
-
-  const handleNewOrder = () => {
-    // Navigate to admin manufacturing orders page where creation dialog exists
-    router.push('/admin/manufacturing-orders')
-  }
+  // Action bar removed per request; default filters are applied implicitly
 
   return (
     <ProtectedRoute allowedRoles={["OPERATOR", "INVENTORY", "MANAGER", "ADMIN"]}>
@@ -234,15 +202,7 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  {/* Filters */}
-                  <DashboardFilterBar
-                    onStatusChange={setStatusFilter}
-                    onSearchChange={setSearchQuery}
-                    onDateRangeChange={handleDateRangeChange}
-                    onExportClick={handleExport}
-                    onNewOrderClick={handleNewOrder}
-                    onMaterialsReadyChange={setReadyOnly}
-                  />
+                  {/* Filters/action bar removed */}
 
                   {/* Manufacturing Orders Table */}
                   <div className="space-y-4">

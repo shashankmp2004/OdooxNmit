@@ -19,11 +19,7 @@ const roles = [
 ];
 
 export default function AuthPage() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-  const [signup, setSignup] = useState({ name: "", email: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -50,61 +46,14 @@ export default function AuthPage() {
         if (remember) localStorage.setItem("mf_email", formData.email);
         else localStorage.removeItem("mf_email");
         toast.success("Signed in successfully!");
-        // After sign in, route based on role
-        setTimeout(() => {
-          const role = (document as any)?.cookie?.includes('next-auth') ? undefined : undefined;
-          // Fetch session from useSession would lag on immediate redirect; query a lightweight endpoint
-          fetch('/api/auth/me').then(async r => {
-            const j = await r.json().catch(() => null);
-            const userRole = j?.user?.role;
-            if (userRole === 'INVENTORY') router.push('/stock-ledger');
-            else if (userRole === 'OPERATOR') router.push('/work-orders');
-            else router.push('/dashboard');
-          }).catch(() => router.push('/dashboard'));
-        }, 50);
+        router.push("/dashboard");
       }
     } catch { toast.error("Sign in error"); }
     finally { setIsLoading(false); }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const handleSignupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSignup((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/auth/simple-signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(signup)
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Sign up failed');
-      toast.success('Account created. You can sign in now.');
-      setFormData({ email: signup.email, password: signup.password });
-      setSignup({ name: '', email: '', password: '' });
-    } catch (err: any) {
-      toast.error(err?.message || 'Sign up failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDemoLogin = (role: (typeof roles)[0]) => {
-    setFormData({
-      email: role.email,
-      password: `${role.id.charAt(0) + role.id.slice(1).toLowerCase()}@123`,
-    });
-  };
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleDemoLogin = (role: typeof roles[0]) => setFormData({ email: role.email, password: `${role.id.charAt(0) + role.id.slice(1).toLowerCase()}@123` });
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
@@ -117,6 +66,7 @@ export default function AuthPage() {
           <Factory className="h-8 w-8 text-primary" />
           <span className="text-2xl font-bold text-foreground">ManufactureOS</span>
         </div>
+
         <Card className="relative border border-border bg-card rounded-2xl shadow-xl overflow-hidden">
           {/* White noise overlay */}
           <div className="absolute inset-0 pointer-events-none">
@@ -128,20 +78,12 @@ export default function AuthPage() {
 
           <CardContent className="relative space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1 border-b border-white/30 pb-1">
+              <div className="space-y-1 border-b border-border pb-1">
                 <Label htmlFor="email">Email</Label>
-                  <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Input id="email" name="email" type="email" placeholder="Enter your email" value={formData.email} onChange={handleInputChange} required />
               </div>
 
-              <div className="space-y-1 border-b border-white/30 pb-1 relative">
+              <div className="space-y-1 border-b border-border pb-1 relative">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" name="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={formData.password} onChange={handleInputChange} required />
                 <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1" onClick={() => setShowPassword(s => !s)} aria-label={showPassword ? "Hide password" : "Show password"}>
@@ -160,9 +102,13 @@ export default function AuthPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : status === "authenticated" ? "Continue" : "Sign In"}
               </Button>
+
+              <div className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account? <Link className="underline hover:text-foreground" href="/signup">Create one</Link>
+              </div>
             </form>
             {/* Demo Accounts */}
-              <div className="mt-6 pt-4 border-t border-border">
+            <div className="mt-6 pt-4 border-t border-border">
               <p className="text-xs text-muted-foreground text-center mb-3">
                 Demo Accounts (click to auto-fill)
               </p>
@@ -198,13 +144,6 @@ export default function AuthPage() {
             </div>
           </CardContent>
         </Card>
-
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">Don’t have an account?</p>
-          <Link href="/signup">
-            <Button variant="secondary" className="mt-2">Create an account</Button>
-          </Link>
-        </div>
       </div>
     </div>
   );
