@@ -22,6 +22,9 @@ interface ManufacturingOrder {
   createdAt: string
   updatedAt: string
   workOrders?: any[]
+  canProduce?: boolean
+  shortagesCount?: number
+  completedAt?: string | null
 }
 
 interface ManufacturingOrdersTableProps {
@@ -30,9 +33,10 @@ interface ManufacturingOrdersTableProps {
   userRole?: string
   startDate?: Date
   endDate?: Date
+  readyOnly?: boolean
 }
 
-export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole = "OPERATOR", startDate, endDate }: ManufacturingOrdersTableProps) {
+export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole = "OPERATOR", startDate, endDate, readyOnly = false }: ManufacturingOrdersTableProps) {
   const [orders, setOrders] = useState<ManufacturingOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -88,7 +92,10 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
       }
     }
 
-    return matchesStatus && matchesSearch && matchesDateRange
+    // Materials readiness filter
+    const matchesReady = !readyOnly || order.canProduce === true
+
+    return matchesStatus && matchesSearch && matchesDateRange && matchesReady
   })
 
   const getStatusColor = (state: string) => {
@@ -148,9 +155,11 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
             <TableHead>Order No</TableHead>
             <TableHead>Product</TableHead>
             <TableHead>Quantity</TableHead>
+            <TableHead>Materials</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Deadline</TableHead>
             <TableHead>Created</TableHead>
+            <TableHead>Completed</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -166,6 +175,15 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
               </TableCell>
               <TableCell>{order.quantity}</TableCell>
               <TableCell>
+                {order.canProduce ? (
+                  <Badge className="bg-emerald-100 text-emerald-800">Ready</Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-800">
+                    Shortages{typeof order.shortagesCount === 'number' ? ` (${order.shortagesCount})` : ''}
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell>
                 <Badge className={getStatusColor(order.state)}>
                   {order.state.replace('_', ' ')}
                 </Badge>
@@ -174,6 +192,7 @@ export function ManufacturingOrdersTable({ statusFilter, searchQuery, userRole =
                 {order.deadline ? formatDate(order.deadline) : 'No deadline'}
               </TableCell>
               <TableCell>{formatDate(order.createdAt)}</TableCell>
+              <TableCell>{order.completedAt ? formatDate(order.completedAt) : '-'}</TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

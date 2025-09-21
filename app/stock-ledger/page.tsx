@@ -153,11 +153,29 @@ export default function StockLedgerPage() {
     }
   }
 
-  const handleExportReport = () => {
-    toast({
-      title: "Export Started",
-      description: "Stock report is being generated...",
-    })
+  const handleExportReport = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (searchQuery) params.set('search', searchQuery)
+      if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter)
+      if (showLowStockOnly) params.set('low', '1')
+
+      const res = await fetch(`/api/stock/export?${params.toString()}`)
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `stock-ledger-${Date.now()}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      toast({ title: 'Export Ready', description: 'Your stock report has been downloaded.' })
+    } catch (e) {
+      console.error('Stock export error', e)
+      toast({ title: 'Export Failed', description: 'Please try again.', variant: 'destructive' })
+    }
   }
 
   return (

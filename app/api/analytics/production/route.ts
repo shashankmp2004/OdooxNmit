@@ -22,14 +22,14 @@ export async function GET(request: NextRequest) {
       const monthEnd = endOfMonth(subMonths(now, i))
 
       const [completedOrders, totalOrders] = await Promise.all([
-        // Completed manufacturing orders in this month
+        // Completed manufacturing orders in this month (use completedAt when available)
         prisma.manufacturingOrder.count({
           where: {
             state: "DONE",
-            updatedAt: {
-              gte: monthStart,
-              lte: monthEnd,
-            },
+            OR: [
+              { completedAt: { gte: monthStart, lte: monthEnd } },
+              { AND: [ { completedAt: null }, { updatedAt: { gte: monthStart, lte: monthEnd } } ] },
+            ],
           },
         }),
         // Total manufacturing orders created in this month

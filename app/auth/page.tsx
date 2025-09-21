@@ -14,7 +14,7 @@ import Link from "next/link";
 const roles = [
   { id: "MANAGER", name: "Manager", icon: User, email: "manager@demo.com" },
   { id: "ADMIN", name: "Admin", icon: Shield, email: "admin@demo.com" },
-  { id: "OPERATOR", name: "Operator", icon: Wrench, email: "operator@demo.com" },
+  { id: "OPERATOR", name: "Operator", icon: Wrench, email: "operator1@demo.com" },
   { id: "INVENTORY", name: "Inventory Manager", icon: Package, email: "inventory@demo.com" },
 ];
 
@@ -67,19 +67,23 @@ export default function AuthPage() {
           <span className="text-2xl font-bold text-foreground">ManufactureOS</span>
         </div>
 
-        <Card className="relative border border-white/20 bg-white/10 backdrop-blur-xl rounded-2xl shadow-lg overflow-hidden hover:scale-[1.02] transition-transform duration-200">
+        <Card className="relative border border-border bg-card rounded-2xl shadow-xl overflow-hidden">
+          {/* White noise overlay */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="w-full h-full opacity-[0.07] bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAACXBIWXMAAAsSAAALEgHS3X78AAAAU0lEQVR4nO3PMQEAAAQAMM5f9F3HChYk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gnkJ7MEIJmP0XZZAAAAAElFTkSuQmCC')] bg-repeat"></div>
+          </div>
           <CardHeader>
             <CardTitle className="text-left text-2xl font-bold">Sign In</CardTitle>
           </CardHeader>
 
           <CardContent className="relative space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1 border-b border-white/30 pb-1">
+              <div className="space-y-1 border-b border-border pb-1">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" name="email" type="email" placeholder="Enter your email" value={formData.email} onChange={handleInputChange} required />
               </div>
 
-              <div className="space-y-1 border-b border-white/30 pb-1 relative">
+              <div className="space-y-1 border-b border-border pb-1 relative">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" name="password" type={showPassword ? "text" : "password"} placeholder="Enter your password" value={formData.password} onChange={handleInputChange} required />
                 <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1" onClick={() => setShowPassword(s => !s)} aria-label={showPassword ? "Hide password" : "Show password"}>
@@ -98,22 +102,44 @@ export default function AuthPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : status === "authenticated" ? "Continue" : "Sign In"}
               </Button>
-            </form>
 
-            <div className="mt-6 pt-4 border-t border-white/30 space-y-2">
-              <p className="text-xs text-muted-foreground text-center">Demo Accounts (click to auto-fill)</p>
-              {roles.map(role => (
-                <Button key={role.id} variant="outline" size="sm" type="button" onClick={() => handleDemoLogin(role)} className="text-xs justify-start h-auto p-2">
-                  <role.icon className="h-4 w-4 mr-2" />
-                  <div className="text-left">
-                    <div className="font-medium">{role.name}</div>
-                    <div className="text-muted-foreground">{role.email}</div>
-                  </div>
-                </Button>
-              ))}
-              <div className="mt-2 p-2 bg-muted/50 rounded-lg text-xs flex items-center gap-2">
-                <AlertCircle className="h-3 w-3" />
-                <span>Password format: {"{Role}"}@123 (e.g., Admin@123)</span>
+              <div className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account? <Link className="underline hover:text-foreground" href="/signup">Create one</Link>
+              </div>
+            </form>
+            {/* Demo Accounts */}
+            <div className="mt-6 pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground text-center mb-3">
+                Demo Accounts (click to auto-fill)
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {roles.map((role) => {
+                  const Icon = role.icon;
+                  return (
+                    <Button
+                      key={role.id}
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      onClick={() => handleDemoLogin(role)}
+                      className="text-xs justify-start h-auto p-2"
+                    >
+                      <Icon className="h-4 w-4 mr-2" />
+                      <div className="text-left">
+                        <div className="font-medium">{role.name}</div>
+                        <div className="text-muted-foreground">
+                          {role.email}
+                        </div>
+                      </div>
+                    </Button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 p-2 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>Password format: {"{Role}"}@123 (e.g., Admin@123)</span>
+                </div>
               </div>
             </div>
           </CardContent>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { consumeStockForMO } from "@/lib/stock";
 import { getRoutingForProduct, resolveWorkCenterIdByName, findStepIndex } from "@/lib/routing";
 import { socketService } from "@/lib/socket";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
 
 export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) => {
   const { id } = req.query;
@@ -18,6 +19,11 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
   }
 
   try {
+    // Rate limit per IP per WO complete
+    const ip = getClientIp(req as any);
+    const rl = checkRateLimit(`wo:complete:${id}:${ip}`, 10, 60 * 1000);
+    rateLimitResponse(res, rl.remaining, rl.resetAt);
+    if (!rl.allowed) return res.status(429).json({ error: "Too many complete attempts, slow down" });
     // Get work order with permissions check
     const wo = await prisma.workOrder.findUnique({
       where: { id },
@@ -47,12 +53,14 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
       ? Math.round((endTime.getTime() - new Date(wo.startTime).getTime()) / (1000 * 60))
       : null;
 
+    const additionalHours = durationMin ? durationMin / 60 : 0;
     const updatedWO = await prisma.workOrder.update({
       where: { id },
       data: {
         status: "COMPLETED",
         endTime,
-        durationMin
+        durationMin,
+        actualTime: (wo.actualTime || 0) + additionalHours
       },
       include: {
         mo: {
@@ -73,26 +81,19 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
 
     const allCompleted = allWorkOrders.every((workOrder: any) => workOrder.status === "COMPLETED");
 
-    let updatedMO = null;
-    let stockConsumptionResult = null;
+  let updatedMO = null;
+  let stockConsumptionResult = null;
     let nextWorkOrder = null;
     
     if (allCompleted) {
-      // Complete the manufacturing order and handle stock consumption
-      updatedMO = await prisma.manufacturingOrder.update({
-        where: { id: wo.moId },
-        data: { state: "DONE" }
-      });
-
       try {
-        // Consume raw materials and produce finished goods
+        // Consume materials and complete MO inside stock.ts transaction
         stockConsumptionResult = await consumeStockForMO(wo.moId);
+        updatedMO = stockConsumptionResult.mo;
       } catch (stockError) {
         console.error("Stock consumption error:", stockError);
-        // MO is marked as DONE but stock consumption failed
-        // This should be handled in a real system (rollback or alert)
         return res.status(500).json({ 
-          error: "Manufacturing order completed but stock consumption failed",
+          error: "Failed to finalize manufacturing order due to stock operation",
           details: stockError instanceof Error ? stockError.message : "Unknown stock error"
         });
       }

@@ -22,14 +22,19 @@ export async function GET(request: NextRequest) {
       const weekEnd = endOfWeek(subWeeks(now, i))
 
       const [completedCount, delayedCount] = await Promise.all([
-        // Completed orders in this week
+        // Completed orders in this week (use completedAt when available, fallback to updatedAt)
         prisma.manufacturingOrder.count({
           where: {
             state: "DONE",
-            updatedAt: {
-              gte: weekStart,
-              lte: weekEnd,
-            },
+            OR: [
+              { completedAt: { gte: weekStart, lte: weekEnd } },
+              {
+                AND: [
+                  { completedAt: null },
+                  { updatedAt: { gte: weekStart, lte: weekEnd } },
+                ],
+              },
+            ],
           },
         }),
         // Delayed orders (past due date but not completed)

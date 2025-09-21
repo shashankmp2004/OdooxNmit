@@ -81,6 +81,8 @@ export default function ReportsPage() {
     products: Array<{id: string, name: string, sku: string}>
     workCenters: Array<{id: string, name: string}>
   }>({ products: [], workCenters: [] })
+  const [importPreview, setImportPreview] = useState<any[]>([])
+  const [importSummary, setImportSummary] = useState<string>("")
   
   const { toast } = useToast()
   const { data: session } = useAuth()
@@ -206,8 +208,22 @@ export default function ReportsPage() {
         title: "File Upload Successful",
         description: `Processed ${result.recordCount} records from ${result.filename}`,
       })
-      
-      // Optionally refresh analytics data here
+      // Show preview
+      setImportPreview(Array.isArray(result.preview) ? result.preview : [])
+      setImportSummary(result.message || '')
+
+      // Refresh analytics data to reflect newly imported records
+      const [ordersRes, utilizationRes, productionRes, summaryRes] = await Promise.all([
+        fetch("/api/analytics/orders"),
+        fetch("/api/analytics/utilization"),
+        fetch("/api/analytics/production"),
+        fetch("/api/analytics/summary"),
+      ])
+
+      if (ordersRes.ok) setOrdersData(await ordersRes.json())
+      if (utilizationRes.ok) setUtilizationData(await utilizationRes.json())
+      if (productionRes.ok) setProductionData(await productionRes.json())
+      if (summaryRes.ok) setAnalyticsData(await summaryRes.json())
       
     } catch (error) {
       console.error('Upload error:', error)
@@ -218,8 +234,8 @@ export default function ReportsPage() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="text-foreground font-medium">{label}</p>
+        <div className="bg-popover/90 text-popover-foreground border border-border rounded-lg p-3 shadow-lg">
+          <p className="font-medium">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {entry.value}
@@ -241,7 +257,7 @@ export default function ReportsPage() {
             <div className="max-w-7xl mx-auto space-y-6">
               {/* KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-card border-border">
+                <Card className="bg-card border-border/60 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -265,7 +281,7 @@ export default function ReportsPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-card border-border">
+                <Card className="bg-card border-border/60 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Lead Time</CardTitle>
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -288,7 +304,7 @@ export default function ReportsPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-card border-border">
+                <Card className="bg-card border-border/60 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">On-Time Delivery</CardTitle>
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -312,7 +328,7 @@ export default function ReportsPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-card border-border">
+                <Card className="bg-card border-border/60 shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Quality Score</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -338,7 +354,7 @@ export default function ReportsPage() {
               </div>
 
               {/* Filters */}
-              <Card className="bg-card border-border overflow-hidden">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/60 overflow-hidden">
                 <CardContent className="p-4">
                   <ReportsFilterBar
                     products={filterOptions.products}
@@ -354,7 +370,7 @@ export default function ReportsPage() {
               </Card>
 
               {/* File Import Section */}
-              <Card className="bg-card border-border">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/60">
                 <CardHeader>
                   <CardTitle className="text-foreground flex items-center gap-2">
                     <Upload className="h-5 w-5" />
@@ -397,10 +413,63 @@ export default function ReportsPage() {
                 </CardContent>
               </Card>
 
+              {/* Import Preview */}
+              {importPreview.length > 0 && (
+                <Card className="bg-card/80 backdrop-blur-sm border-border/60">
+                  <CardHeader>
+                    <CardTitle className="text-foreground flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Import Preview (first {importPreview.length} rows)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {importSummary && (
+                      <p className="text-sm text-muted-foreground mb-3">{importSummary}</p>
+                    )}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-muted-foreground border-b border-border">
+                            <th className="py-2 pr-4">Date</th>
+                            <th className="py-2 pr-4">Work Center</th>
+                            <th className="py-2 pr-4">Product</th>
+                            <th className="py-2 pr-4">Order ID</th>
+                            <th className="py-2 pr-4">Status</th>
+                            <th className="py-2 pr-4">Qty</th>
+                            <th className="py-2 pr-4">Completed</th>
+                            <th className="py-2 pr-4">Lead Time (days)</th>
+                            <th className="py-2 pr-4">Efficiency (%)</th>
+                            <th className="py-2 pr-4">Defect Rate (%)</th>
+                            <th className="py-2 pr-0">Cost ($)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importPreview.map((row, idx) => (
+                            <tr key={idx} className="border-b border-border/60">
+                              <td className="py-2 pr-4">{row.date}</td>
+                              <td className="py-2 pr-4">{row.workCenter}</td>
+                              <td className="py-2 pr-4">{row.product}</td>
+                              <td className="py-2 pr-4">{row.orderId}</td>
+                              <td className="py-2 pr-4">{row.status}</td>
+                              <td className="py-2 pr-4">{row.quantity}</td>
+                              <td className="py-2 pr-4">{row.completedQuantity}</td>
+                              <td className="py-2 pr-4">{row.leadTime}</td>
+                              <td className="py-2 pr-4">{row.efficiency}</td>
+                              <td className="py-2 pr-4">{row.defectRate}</td>
+                              <td className="py-2 pr-0">{row.cost}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Charts Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Orders Completed vs Delayed */}
-                <Card className="bg-card border-border">
+                <Card className="bg-card/80 backdrop-blur-sm border-border/60">
                   <CardHeader>
                     <CardTitle className="text-foreground">Orders Completed vs. Delayed (Weekly)</CardTitle>
                   </CardHeader>
@@ -448,7 +517,7 @@ export default function ReportsPage() {
               </div>
 
               {/* Production Output Chart */}
-              <Card className="bg-card border-border">
+              <Card className="bg-card/80 backdrop-blur-sm border-border/60">
                 <CardHeader>
                   <CardTitle className="text-foreground">Production Output Over Time</CardTitle>
                 </CardHeader>
@@ -484,7 +553,7 @@ export default function ReportsPage() {
 
               {/* Summary Statistics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="bg-card border-border">
+                <Card className="bg-card border-border/60">
                   <CardHeader>
                     <CardTitle className="text-sm font-medium text-muted-foreground">Production Efficiency</CardTitle>
                   </CardHeader>
@@ -505,7 +574,7 @@ export default function ReportsPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-card border-border">
+                <Card className="bg-card border-border/60">
                   <CardHeader>
                     <CardTitle className="text-sm font-medium text-muted-foreground">Cost per Unit</CardTitle>
                   </CardHeader>
@@ -529,7 +598,7 @@ export default function ReportsPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-card border-border">
+                <Card className="bg-card border-border/60">
                   <CardHeader>
                     <CardTitle className="text-sm font-medium text-muted-foreground">Defect Rate</CardTitle>
                   </CardHeader>

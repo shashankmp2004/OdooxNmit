@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { KPICard } from "@/components/kpi-card"
-import { DashboardFilterBar } from "@/components/dashboard-filter-bar"
 import { ManufacturingOrdersTable } from "@/components/manufacturing-orders-table"
 import { LiveActivityFeed } from "@/components/live-activity-feed"
 import { ProtectedRoute } from "@/components/protected-route"
@@ -28,8 +28,10 @@ export default function DashboardPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [readyOnly, setReadyOnly] = useState(false)
   const [loading, setLoading] = useState(true)
   const { data: session } = useAuth()
+  const router = useRouter()
 
   const userRole = session?.user?.role || "OPERATOR"
 
@@ -122,6 +124,8 @@ export default function DashboardPage() {
     }
   }
 
+  // Action bar removed per request; default filters are applied implicitly
+
   return (
     <ProtectedRoute allowedRoles={["OPERATOR", "INVENTORY", "MANAGER", "ADMIN"]}>
       <div className="flex h-screen bg-background">
@@ -198,12 +202,7 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  {/* Filters */}
-                  <DashboardFilterBar
-                    onStatusChange={setStatusFilter}
-                    onSearchChange={setSearchQuery}
-                    onDateRangeChange={handleDateRangeChange}
-                  />
+                  {/* Filters/action bar removed */}
 
                   {/* Manufacturing Orders Table */}
                   <div className="space-y-4">
@@ -219,6 +218,7 @@ export default function DashboardPage() {
                         userRole={userRole}
                         startDate={startDate}
                         endDate={endDate}
+                        readyOnly={readyOnly}
                       />
                     </div>
                   </div>

@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { getRoutingForProduct, resolveWorkCenterIdByName } from "@/lib/routing";
+import { checkMaterialAvailability } from "@/lib/stock";
+import type { PrismaClient } from "@prisma/client";
 
 const createMOSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -80,13 +83,14 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           prisma.manufacturingOrder.count({ where })
         ]);
 
-        // Calculate completion status for each MO
+        // Calculate completion status and material availability for each MO
         const mosWithStatus = await Promise.all(
           mos.map(async (mo: any) => {
-            const completedWOs = await prisma.workOrder.count({
-              where: { moId: mo.id, status: "COMPLETED" }
-            });
-            
+            const [completedWOs, availability] = await Promise.all([
+              prisma.workOrder.count({ where: { moId: mo.id, status: "COMPLETED" } }),
+              checkMaterialAvailability(mo.id).catch(() => ({ canProduce: false, shortages: [] } as any))
+            ]);
+
             const totalWOs = mo._count.workOrders;
             const completionPercentage = totalWOs > 0 ? (completedWOs / totalWOs) * 100 : 0;
 
@@ -94,7 +98,9 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
               ...mo,
               completionPercentage,
               completedWorkOrders: completedWOs,
-              totalWorkOrders: totalWOs
+              totalWorkOrders: totalWOs,
+              canProduce: availability?.canProduce ?? false,
+              shortagesCount: availability?.shortages?.length ?? 0
             };
           })
         );
@@ -123,20 +129,20 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           });
         }
 
-        // Verify product exists and has BOM
+        // Verify product exists and load active BOM (new structure preferred)
         const product = await prisma.product.findUnique({
           where: { id: parsed.data.productId },
           include: {
-            bom: {
+            boms: {
+              where: { isActive: true },
               include: {
-                components: {
-                  include: {
-                    material: true
-                  }
-                }
-              }
-            }
-          }
+                items: { include: { component: true } },
+                components: { include: { material: true } }, // fallback
+              },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
         });
 
         if (!product) {
@@ -147,37 +153,84 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           return res.status(400).json({ error: "Can only create MO for finished products" });
         }
 
-        // Get BOM snapshot
-        const bomSnapshot = product.bom?.components.map((c: any) => ({
-          materialId: c.materialId,
-          materialName: c.material.name,
-          materialSku: c.material.sku,
-          qtyPerUnit: c.qtyPerUnit
-        })) || null;
+        // Get BOM snapshot (prefer new BOMItem list, fallback to old components)
+        const activeBOM = product.boms?.[0] || null;
+        const bomSnapshot = activeBOM
+          ? (activeBOM.items.length > 0
+              ? activeBOM.items.map((i: any) => ({
+                  materialId: i.componentId,
+                  materialName: i.component?.name,
+                  materialSku: i.component?.sku,
+                  qtyPerUnit: i.quantity,
+                }))
+              : activeBOM.components.map((c: any) => ({
+                  materialId: c.materialId,
+                  materialName: c.material?.name,
+                  materialSku: c.material?.sku,
+                  qtyPerUnit: c.qtyPerUnit,
+                })))
+          : null;
 
         // Generate unique order number
         const orderNo = `MO-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
-        const mo = await prisma.manufacturingOrder.create({
-          data: {
-            orderNo,
-            name: parsed.data.name,
-            productId: parsed.data.productId,
-            quantity: parsed.data.quantity,
-            deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
-            bomSnapshot,
-            createdById: req.user.id
-          },
-          include: {
-            product: true,
-            createdBy: {
-              select: { name: true, email: true }
+        // Compute routing up front
+        const route = await getRoutingForProduct(parsed.data.productId);
+
+    // Create MO and initial WOs atomically
+  const created = await prisma.$transaction(async (tx: PrismaClient) => {
+          const createdMO = await tx.manufacturingOrder.create({
+            data: {
+              orderNo,
+              name: parsed.data.name,
+              productId: parsed.data.productId,
+              quantity: parsed.data.quantity,
+              deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
+              bomSnapshot,
+              createdById: req.user.id,
             },
-            workOrders: true
+          });
+          if (route.length > 0) {
+            for (const step of route) {
+              const wcId = await resolveWorkCenterIdByName(step);
+              // Derive estimated time in hours from work center capacity (units/hour) or default to 1h
+              let estimatedTime = 1; // default 1 hour if no capacity data
+              let machineWorkCenter: string | null = step;
+              if (wcId) {
+                const wc = await tx.workCenter.findUnique({ where: { id: wcId }, select: { capacity: true, name: true } });
+                machineWorkCenter = wc?.name || step;
+                if (wc?.capacity && wc.capacity > 0) {
+                  estimatedTime = parsed.data.quantity / wc.capacity;
+                }
+              }
+              await tx.workOrder.create({
+                data: {
+                  moId: createdMO.id,
+                  title: `${step} - ${parsed.data.name}`,
+                  taskName: step,
+                  status: "PENDING",
+                  priority: "MEDIUM",
+                  workCenterId: wcId || undefined,
+                  machineWorkCenter: machineWorkCenter || undefined,
+                  estimatedTime,
+                },
+              });
+            }
           }
+          return createdMO.id;
         });
 
-        return res.status(201).json(mo);
+        // Return MO with relations
+        const moFull = await prisma.manufacturingOrder.findUnique({
+          where: { id: created },
+          include: {
+            product: true,
+            createdBy: { select: { name: true, email: true } },
+            workOrders: true,
+          },
+        });
+
+        return res.status(201).json(moFull);
       } catch (error) {
         console.error("MO POST error:", error);
         return res.status(500).json({ error: "Failed to create manufacturing order" });

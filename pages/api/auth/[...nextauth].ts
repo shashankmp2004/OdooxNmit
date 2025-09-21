@@ -42,11 +42,10 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
-  // Use signed JWT session cookies with tight lifetimes and rotation
+  // Use signed JWT session cookies; clearing cookies removes access immediately
   session: {
     strategy: "jwt",
-    // remember-me default (30 days) with periodic rotation
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24 * 14, // 14 days
     updateAge: 60 * 60, // rotate roughly hourly when active
   },
   cookies: {
@@ -69,7 +68,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role;
         token.id = (user as any).id;
       }
-      return token;
+      return token as any;
     },
     async session({ session, token }) {
       if (token && session.user) {

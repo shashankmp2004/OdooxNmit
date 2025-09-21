@@ -14,6 +14,7 @@ import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, RefreshCw, Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Progress } from "@/components/ui/progress"
 
 interface WorkOrder {
   id: string
@@ -49,6 +50,7 @@ export default function WorkOrdersPage() {
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [issueDialogOpen, setIssueDialogOpen] = useState(false)
   const [selectedWorkOrderId, setSelectedWorkOrderId] = useState("")
+  const [tick, setTick] = useState(0)
   const { toast } = useToast()
   const { data: session } = useAuth()
   const user = session?.user
@@ -79,6 +81,12 @@ export default function WorkOrdersPage() {
     fetchWorkOrders()
   }, [])
 
+  // Tick every 15s to update time-based progress bars
+  useEffect(() => {
+    const i = setInterval(() => setTick((t) => t + 1), 15000)
+    return () => clearInterval(i)
+  }, [])
+
   const filteredWorkOrders = (Array.isArray(workOrders) ? workOrders : []).filter((order: any) => {
     const matchesSearch =
       (order.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
@@ -87,7 +95,11 @@ export default function WorkOrdersPage() {
       (order.description?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
       (order.assignedTo?.name?.toLowerCase() || "").includes(searchQuery.toLowerCase())
 
-    const matchesStatus = statusFilter === "all" || (order.status?.toLowerCase() || "") === statusFilter.toLowerCase()
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "planned" && order.status === "PENDING") ||
+      (statusFilter === "in-progress" && (order.status === "STARTED" || order.status === "PAUSED")) ||
+      (statusFilter === "completed" && order.status === "COMPLETED") ||
+      (statusFilter === "delayed" && order.status === "BLOCKED")
     // Note: The API doesn't have priority field, so we'll ignore priority filter for now
     // const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter
 
@@ -126,19 +138,29 @@ export default function WorkOrdersPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ state: newStatus.toUpperCase() }),
+          body: JSON.stringify({ status: newStatus.toUpperCase() }),
         });
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to update work order: ${response.statusText}`);
+        let errText = `Failed to update work order: ${response.statusText}`;
+        try {
+          const err = await response.json();
+          if (err?.error) errText = err.error;
+          if (err?.shortages) {
+            const s = Array.isArray(err.shortages) ? err.shortages.map((x: any) => `${x.materialName || x.materialId}: need ${x.required}, have ${x.available}`).join("; ") : "";
+            if (s) errText += ` — Shortages: ${s}`;
+          }
+        } catch {}
+        throw new Error(errText);
       }
 
-      const updatedWorkOrder = await response.json();
+      const payload = await response.json();
+      const updatedWorkOrder = payload.workOrder || payload; // routes return {workOrder}
 
       // Update local state with the response from server
       setWorkOrders((prev) =>
-        prev.map((order) =>
+        prev.map((order: any) =>
           order.id === id
             ? { ...order, ...updatedWorkOrder }
             : order,
@@ -150,11 +172,11 @@ export default function WorkOrdersPage() {
         description: `Work order status changed to ${newStatus}`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating work order:', error);
       toast({
         title: "Error",
-        description: "Failed to update work order status",
+        description: error?.message || "Failed to update work order status",
         variant: "destructive",
       });
     }
@@ -171,14 +193,20 @@ export default function WorkOrdersPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update progress: ${response.statusText}`);
+        let errText = `Failed to update progress: ${response.statusText}`;
+        try {
+          const err = await response.json();
+          if (err?.error) errText = err.error;
+        } catch {}
+        throw new Error(errText);
       }
 
-      const updatedWorkOrder = await response.json();
+  const payload = await response.json();
+  const updatedWorkOrder = payload.workOrder || payload;
 
       // Update local state with the response from server
       setWorkOrders((prev) =>
-        prev.map((order) =>
+        prev.map((order: any) =>
           order.id === id
             ? { ...order, ...updatedWorkOrder }
             : order,
@@ -190,11 +218,11 @@ export default function WorkOrdersPage() {
         description: `Work order progress set to ${progress}%`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating progress:', error);
       toast({
         title: "Error",
-        description: "Failed to update work order progress",
+        description: error?.message || "Failed to update work order progress",
         variant: "destructive",
       });
     }
@@ -221,14 +249,26 @@ export default function WorkOrdersPage() {
   const getStatusCounts = () => {
     const safeWorkOrders = Array.isArray(workOrders) ? workOrders : []
     return {
-      pending: safeWorkOrders.filter((o) => o.state === "PENDING").length,
-      inProgress: safeWorkOrders.filter((o) => o.state === "IN_PROGRESS").length,
-      completed: safeWorkOrders.filter((o) => o.state === "COMPLETED").length,
-      blocked: safeWorkOrders.filter((o) => o.state === "BLOCKED").length,
+      pending: safeWorkOrders.filter((o: any) => o.status === "PENDING").length,
+      inProgress: safeWorkOrders.filter((o: any) => o.status === "STARTED" || o.status === "PAUSED").length,
+      completed: safeWorkOrders.filter((o: any) => o.status === "COMPLETED").length,
+      blocked: safeWorkOrders.filter((o: any) => o.status === "BLOCKED").length,
     }
   }
 
   const statusCounts = getStatusCounts()
+
+  // Helper to compute time-based progress while STARTED using estimatedTime (hours)
+  const computeTimeProgress = (wo: any) => {
+    if (!wo) return 0;
+    const estHrs = Number(wo.estimatedTime);
+    if (!estHrs || estHrs <= 0) return wo.progress || 0;
+    if (wo.status !== "STARTED" || !wo.startTime) return wo.progress || 0;
+    const elapsedMs = Date.now() - new Date(wo.startTime).getTime();
+    const elapsedHrs = elapsedMs / (1000 * 60 * 60);
+    const pct = Math.min(100, Math.max(0, (elapsedHrs / estHrs) * 100));
+    return Math.round(pct);
+  }
 
   return (
     <ProtectedRoute allowedRoles={["OPERATOR", "MANAGER", "ADMIN"]}>
@@ -330,27 +370,53 @@ export default function WorkOrdersPage() {
                         <p className="text-sm text-muted-foreground">Order: {workOrder.mo?.orderNo || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">Machine/Work Center: {workOrder.machineWorkCenter || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">
-                          Estimated: {workOrder.estimatedTime || 0}h
-                          {workOrder.actualTime && ` | Actual: ${workOrder.actualTime}h`}
+                          Estimated: {Number(workOrder.estimatedTime || 0).toFixed(2)}h
+                          {workOrder.actualTime ? ` | Actual: ${Number(workOrder.actualTime).toFixed(2)}h` : ''}
                         </p>
                         
                         {/* Progress Section */}
                         <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Progress:</span>
-                            <span className="text-sm font-medium">{workOrder.progress || 0}%</span>
-                          </div>
-                          {(workOrder.status === "STARTED" || workOrder.status === "PAUSED") && (
-                            <div className="space-y-2">
-                              <Slider
-                                value={[workOrder.progress || 0]}
-                                onValueChange={(value) => handleProgressUpdate(workOrder.id, value[0])}
-                                max={100}
-                                step={5}
-                                className="w-full"
-                              />
-                              <p className="text-xs text-muted-foreground">Drag to update progress</p>
-                            </div>
+                          {workOrder.status === "STARTED" && workOrder.estimatedTime ? (
+                            <>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Time Progress:</span>
+                                <span className="text-sm font-medium">{computeTimeProgress(workOrder)}%</span>
+                              </div>
+                              <Progress value={computeTimeProgress(workOrder)} className="h-2" />
+                              <p className="text-xs text-muted-foreground">
+                                Est: {Number(workOrder.estimatedTime).toFixed(2)}h · ETA: {(() => {
+                                  const est = Number(workOrder.estimatedTime);
+                                  if (!est || !workOrder.startTime) return '—';
+                                  const elapsedHrs = (Date.now() - new Date(workOrder.startTime).getTime()) / (1000 * 60 * 60);
+                                  const remainingHrs = Math.max(0, est - elapsedHrs);
+                                  const mins = Math.round(remainingHrs * 60);
+                                  if (mins <= 0) return 'now';
+                                  if (mins < 60) return `${mins} min`;
+                                  const hrs = Math.floor(mins / 60);
+                                  const rem = mins % 60;
+                                  return `${hrs}h${rem ? ` ${rem}m` : ''}`;
+                                })()}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">Progress:</span>
+                                <span className="text-sm font-medium">{workOrder.progress || 0}%</span>
+                              </div>
+                              {(workOrder.status === "STARTED" || workOrder.status === "PAUSED") && (
+                                <div className="space-y-2">
+                                  <Slider
+                                    value={[workOrder.progress || 0]}
+                                    onValueChange={(value) => handleProgressUpdate(workOrder.id, value[0])}
+                                    max={100}
+                                    step={5}
+                                    className="w-full"
+                                  />
+                                  <p className="text-xs text-muted-foreground">Drag to update progress</p>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                         {workOrder.assignedTo && (
@@ -382,7 +448,7 @@ export default function WorkOrdersPage() {
                             size="sm" 
                             variant="outline"
                             onClick={() => handleStatusChange(workOrder.id, "COMPLETED")}
-                            disabled={workOrder.status === "COMPLETED" || workOrder.status === "PENDING"}
+                            disabled={workOrder.status === "COMPLETED" || !(workOrder.status === "STARTED" || workOrder.status === "PAUSED")}
                           >
                             Complete
                           </Button>

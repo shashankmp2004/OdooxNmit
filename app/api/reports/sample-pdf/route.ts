@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+// Force Node.js runtime to support pdfkit
+export const runtime = 'nodejs'
+
 export async function GET() {
   try {
     // Use pdfkit for a valid PDF
@@ -32,6 +35,7 @@ export async function GET() {
       headers: {
         'Content-Disposition': 'attachment; filename="manufacturing_reports_sample.pdf"',
         'Content-Type': 'application/pdf',
+        'Content-Length': String(buffer.length),
       },
     })
   } catch (error) {

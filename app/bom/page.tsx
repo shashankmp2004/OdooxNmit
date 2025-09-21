@@ -8,13 +8,11 @@ import { BOMPreview } from "@/components/bom-preview"
 import { ProtectedRoute } from "@/components/protected-route"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Save, RotateCcw, FileText, X } from "lucide-react"
+import { Plus, Save, RotateCcw, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface BOMComponent {
@@ -32,12 +30,6 @@ interface Product {
   isFinished: boolean
 }
 
-interface WorkOrder {
-  id: string
-  orderNo: string
-  name: string
-}
-
 export default function BOMPage() {
   const [finishedProduct, setFinishedProduct] = useState("")
   const [components, setComponents] = useState<BOMComponent[]>([])
@@ -50,7 +42,6 @@ export default function BOMPage() {
   // API data
   const [availableProducts, setAvailableProducts] = useState<Product[]>([])
   const [availableComponents, setAvailableComponents] = useState<Product[]>([])
-  const [availableWorkOrders, setAvailableWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
   
   const { toast } = useToast()
@@ -61,10 +52,7 @@ export default function BOMPage() {
     async function fetchBOMData() {
       try {
         setLoading(true)
-        const [productsResponse, workOrdersResponse] = await Promise.all([
-          fetch('/api/products'),
-          fetch('/api/work-orders')
-        ])
+        const productsResponse = await fetch('/api/products')
 
         if (productsResponse.ok) {
           const productsData = await productsResponse.json()
@@ -76,12 +64,6 @@ export default function BOMPage() {
           
           setAvailableProducts(finishedProducts)
           setAvailableComponents(rawMaterials)
-        }
-
-        if (workOrdersResponse.ok) {
-          const workOrdersData = await workOrdersResponse.json()
-          const workOrders = workOrdersData.workOrders || workOrdersData || []
-          setAvailableWorkOrders(workOrders)
         }
       } catch (err) {
         console.error('Error loading BOM data:', err)
@@ -117,16 +99,6 @@ export default function BOMPage() {
     setComponents((prev) => prev.filter((comp) => comp.id !== id))
   }
 
-  const addWorkOrder = (workOrderId: string) => {
-    if (!selectedWorkOrders.includes(workOrderId)) {
-      setSelectedWorkOrders([...selectedWorkOrders, workOrderId])
-    }
-  }
-
-  const removeWorkOrder = (workOrderId: string) => {
-    setSelectedWorkOrders((prev) => prev.filter((id) => id !== workOrderId))
-  }
-
   const resetForm = () => {
     setFinishedProduct("")
     setComponents([])
@@ -134,6 +106,19 @@ export default function BOMPage() {
     setEstimatedTime(0)
     setEstimatedCost(0)
     setDescription("")
+  }
+
+  const generateUUID = () => {
+    try {
+      // Prefer browser crypto if available
+      // @ts-ignore - randomUUID exists on modern browsers
+      if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
+        // @ts-ignore
+        return (crypto as any).randomUUID()
+      }
+    } catch {}
+    // Fallback
+    return `bom-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`
   }
 
   const handleSubmit = async () => {
@@ -156,25 +141,85 @@ export default function BOMPage() {
       return
     }
 
-    setIsSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+  setIsSubmitting(true)
+  // Simulate processing delay slightly for UX, but proceed with API calls
+  await new Promise((resolve) => setTimeout(resolve, 400))
 
+    const bomId = generateUUID()
     const bomData = {
+      id: bomId,
       finishedProduct,
       components: validComponents,
-      workOrders: selectedWorkOrders,
-      estimatedTime,
-      estimatedCost,
+      workOrders: selectedWorkOrders, // kept for compatibility; UI to attach WOs removed
+      estimatedTime, // no longer set via UI
+      estimatedCost, // no longer set via UI
       description,
       createdAt: new Date().toISOString(),
     }
 
     console.log("BOM Created:", bomData)
 
-    toast({
-      title: "BOM Created Successfully",
-      description: `BOM for ${finishedProduct} has been saved.`,
-    })
+    try {
+      // 1) Create a Manufacturing Order for the selected finished product
+      const product = availableProducts.find(p => p.id === finishedProduct)
+      const moPayload: any = {
+        name: product ? `MO for ${product.name}` : `MO for ${finishedProduct}`,
+        productId: finishedProduct,
+        quantity: 1,
+      }
+
+      const moRes = await fetch('/api/mos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(moPayload)
+      })
+
+      if (!moRes.ok) {
+        const err = await moRes.json().catch(() => ({}))
+        throw new Error(err?.error || `Failed to create Manufacturing Order (${moRes.status})`)
+      }
+
+  const mo = await moRes.json()
+
+      // 2) Create a Work Order linked to the MO. Use BOM's estimatedTime if provided (>0)
+      const woPayload: any = {
+        moId: mo.id,
+        title: product ? `Work Order for ${product.name}` : 'Work Order',
+        description: description || undefined,
+        priority: 'MEDIUM',
+      }
+      // If UI has an estimate use it; otherwise fallback to 1 hour default
+      if (estimatedTime && estimatedTime > 0) {
+        woPayload.estimatedTime = estimatedTime
+      } else {
+        woPayload.estimatedTime = 1
+      }
+
+      const woRes = await fetch('/api/work-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(woPayload)
+      })
+
+      if (!woRes.ok) {
+        const err = await woRes.json().catch(() => ({}))
+        throw new Error(err?.error || `Failed to create Work Order (${woRes.status})`)
+      }
+
+      const wo = await woRes.json()
+
+      toast({
+        title: "BOM + Work Order Created",
+        description: `BOM ID: ${bomId}. MO: ${mo.orderNo || mo.id}. WO: ${wo.id}.`,
+      })
+    } catch (e: any) {
+      console.error('Error creating MO/WO from BOM:', e)
+      toast({
+        title: 'Error',
+        description: e?.message || 'Failed to create work order from BOM',
+        variant: 'destructive'
+      })
+    }
 
     resetForm()
     setIsSubmitting(false)
@@ -198,11 +243,11 @@ export default function BOMPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="finished-product">Finished Product</Label>
+                      <div className="space-y-4 p-4 bg-muted/30 rounded-lg border border-border">
+                        <div className="space-y-2">
+                          <Label htmlFor="finished-product" className="text-sm font-medium">Finished Product</Label>
                           <Select value={finishedProduct} onValueChange={setFinishedProduct}>
-                            <SelectTrigger className="bg-background border-input">
+                            <SelectTrigger className="bg-background border-input h-10 rounded-md text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                               <SelectValue placeholder="Select finished product" />
                             </SelectTrigger>
                             <SelectContent>
@@ -220,15 +265,14 @@ export default function BOMPage() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <Label htmlFor="description">Description (Optional)</Label>
+                        <div className="space-y-2">
+                          <Label htmlFor="description" className="text-sm font-medium">Description (Optional)</Label>
                           <Textarea
                             id="description"
-                            placeholder="BOM description..."
+                            placeholder="Brief description to help identify this BOM"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            rows={3}
-                            className="mt-2"
+                            className="bg-background border-input rounded-md text-base placeholder:text-muted-foreground/70 resize-none h-24 shadow-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                           />
                         </div>
                       </div>
@@ -280,92 +324,7 @@ export default function BOMPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Step 3: Work Orders */}
-                  <Card className="bg-card border-border">
-                    <CardHeader>
-                      <CardTitle className="text-foreground">Step 3: Attach Work Orders (Optional)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <Select onValueChange={addWorkOrder}>
-                          <SelectTrigger className="bg-background border-input">
-                            <SelectValue placeholder="Select work order to attach" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {loading ? (
-                              <SelectItem value="loading" disabled>Loading work orders...</SelectItem>
-                            ) : availableWorkOrders.length > 0 ? (
-                              availableWorkOrders
-                                .filter((wo) => !selectedWorkOrders.includes(wo.id))
-                                .map((workOrder) => (
-                                  <SelectItem key={workOrder.id} value={workOrder.id}>
-                                    {workOrder.orderNo} - {workOrder.name}
-                                  </SelectItem>
-                                ))
-                            ) : (
-                              <SelectItem value="none" disabled>No work orders available</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-
-                        {selectedWorkOrders.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {selectedWorkOrders.map((workOrderId) => {
-                              const workOrder = availableWorkOrders.find(wo => wo.id === workOrderId)
-                              return (
-                                <Badge key={workOrderId} variant="secondary" className="flex items-center gap-1">
-                                  {workOrder ? `${workOrder.orderNo} - ${workOrder.name}` : workOrderId}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-4 w-4 p-0 hover:bg-transparent"
-                                    onClick={() => removeWorkOrder(workOrderId)}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </Badge>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Step 4: Estimates */}
-                  <Card className="bg-card border-border">
-                    <CardHeader>
-                      <CardTitle className="text-foreground">Step 4: Set Estimates</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="estimated-time">Estimated Production Time (hours)</Label>
-                          <Input
-                            id="estimated-time"
-                            type="number"
-                            step="0.5"
-                            placeholder="0"
-                            value={estimatedTime || ""}
-                            onChange={(e) => setEstimatedTime(Number.parseFloat(e.target.value) || 0)}
-                            className="bg-background border-input"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="estimated-cost">Total Estimated Cost ($)</Label>
-                          <Input
-                            id="estimated-cost"
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={estimatedCost || ""}
-                            onChange={(e) => setEstimatedCost(Number.parseFloat(e.target.value) || 0)}
-                            className="bg-background border-input"
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* Step 3 and Step 4 removed as per requirements */}
 
                   {/* Action Buttons */}
                   <div className="flex gap-4">

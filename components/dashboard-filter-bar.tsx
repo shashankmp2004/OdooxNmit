@@ -12,12 +12,16 @@ interface Props {
   onStatusChange?: (status: string) => void
   onSearchChange?: (search: string) => void
   onDateRangeChange?: (startDate: Date | undefined, endDate: Date | undefined) => void
+  onExportClick?: () => void
+  onNewOrderClick?: () => void
+  onMaterialsReadyChange?: (readyOnly: boolean) => void
 }
 
-export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRangeChange }: Props) {
+export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRangeChange, onExportClick, onNewOrderClick, onMaterialsReadyChange }: Props) {
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
   const [range, setRange] = useState<DateRange>({})
+  const [readyOnly, setReadyOnly] = useState(false)
 
   const left = (
     <>
@@ -35,7 +39,21 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
         value={status}
         onValueChange={(v) => {
           setStatus(v)
-          onStatusChange?.(v)
+          // Normalize to backend enums where applicable
+          const mapped = v === 'all'
+            ? 'all'
+            : v === 'planned'
+              ? 'PLANNED'
+              : v === 'in-progress'
+                ? 'IN_PROGRESS'
+                : v === 'completed'
+                  ? 'DONE'
+                  : v === 'cancelled'
+                    ? 'CANCELED'
+                    : v === 'delayed'
+                      ? 'DELAYED'
+                      : v
+          onStatusChange?.(mapped)
         }}
       >
         <SelectTrigger className="bg-background border border-gray-200 dark:border-gray-600 h-10 w-40 [&[data-size=default]]:h-10">
@@ -59,6 +77,22 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
           onDateRangeChange?.(r.from, r.to)
         }}
       />
+
+      <div className="hidden md:flex items-center gap-2 pl-2">
+        <label className="text-sm text-foreground/80 select-none cursor-pointer" htmlFor="ready-only">
+          Ready only
+        </label>
+        <input
+          id="ready-only"
+          type="checkbox"
+          className="h-4 w-4 accent-primary cursor-pointer"
+          checked={readyOnly}
+          onChange={(e) => {
+            setReadyOnly(e.target.checked)
+            onMaterialsReadyChange?.(e.target.checked)
+          }}
+        />
+      </div>
 
       <div className="hidden md:flex items-center gap-3">
         <a
@@ -107,14 +141,23 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
 
   const right = (
     <>
-      <Button variant="default" className="h-10 bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow">
+      <Button
+        variant="default"
+        onClick={onExportClick}
+        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow"
+      >
         <Download className="mr-2 h-4 w-4" />
         Export
       </Button>
-      <Button className="h-10 bg-primary text-primary-foreground hover:bg-primary/90">
-        <Plus className="mr-2 h-4 w-4" />
-        New Order
-      </Button>
+      {onNewOrderClick && (
+        <Button
+          onClick={onNewOrderClick}
+          className="h-10 bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          New Order
+        </Button>
+      )}
     </>
   )
 
