@@ -29,6 +29,7 @@ Modern manufacturing management system built with Next.js 14 App Router. It cove
 - Socket.IO for real‑time
 - Zod, date-fns, XLSX, pdfkit (PDF), sonner, lucide-react
 
+## 📊 Entity Relationship Overview
 ```mermaid
 erDiagram
     User ||--o{ ManufacturingOrder : creates
