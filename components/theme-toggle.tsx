@@ -3,8 +3,7 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -17,40 +16,40 @@ export function ThemeToggle() {
 
   if (!mounted) return null;
 
+  const isDark = resolvedTheme === "dark";
+
   const toggle = () => {
     const html = document.documentElement;
     html.classList.add("theme-transition");
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    setTheme(isDark ? "light" : "dark");
     setTimeout(() => html.classList.remove("theme-transition"), 350);
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-9 w-9 p-0 relative underline decoration-transparent hover:decoration-foreground hover:underline-offset-4 transition-all"
+    <button
       onClick={toggle}
-      aria-pressed={resolvedTheme === "dark"}
+      className="relative inline-flex h-6 w-11 items-center rounded-full bg-border hover:bg-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
+      style={{
+        justifyContent: isDark ? "flex-end" : "flex-start",
+        padding: "2px",
+      }}
+      aria-pressed={isDark}
+      aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
     >
-      <span className="absolute inset-0 grid place-items-center">
-        <Sun
-          className={`h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-            resolvedTheme === "dark"
-              ? "opacity-0 -rotate-90 scale-75"
-              : "opacity-100 rotate-0 scale-100"
-          }`}
-        />
-      </span>
-      <span className="absolute inset-0 grid place-items-center">
-        <Moon
-          className={`h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-            resolvedTheme === "dark"
-              ? "opacity-100 rotate-0 scale-100"
-              : "opacity-0 rotate-90 scale-75"
-          }`}
-        />
-      </span>
-      <span className="sr-only">Toggle theme</span>
-    </Button>
+      <motion.div
+        className="h-5 w-5 bg-foreground rounded-full flex items-center justify-center shadow-sm"
+        layout
+        transition={{
+          duration: 0.2,
+          ease: "easeOut",
+        }}
+      >
+        {isDark ? (
+          <Moon className="h-3 w-3 text-background" />
+        ) : (
+          <Sun className="h-3 w-3 text-background" />
+        )}
+      </motion.div>
+    </button>
   );
 }
