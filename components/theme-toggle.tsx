@@ -4,12 +4,9 @@ import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
-import { Button } from "@/components/ui/button"
-
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
-  const [toggling, setToggling] = React.useState(false)
 
   // Avoid hydration issues
   React.useEffect(() => {
@@ -18,55 +15,38 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-        <Sun className="h-[1.2rem] w-[1.2rem]" />
-        <span className="sr-only">Toggle theme</span>
-      </Button>
+      <div className="w-12 h-6 bg-gray-200 rounded-full flex items-center justify-center">
+        <Sun className="h-4 w-4 text-gray-600" />
+      </div>
     )
   }
 
+  const isDark = resolvedTheme === 'dark'
+
   const toggle = () => {
-    // Add temporary class to enable smooth transitions for CSS variables
-    const html = document.documentElement
-    html.classList.add('theme-transition')
-    setToggling(true)
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-    // Remove the class after animations complete
-    window.setTimeout(() => {
-      html.classList.remove('theme-transition')
-      setToggling(false)
-    }, 350)
+    setTheme(isDark ? 'light' : 'dark')
   }
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-9 w-9 p-0 relative"
+    <button
       onClick={toggle}
-      aria-live="polite"
-      aria-pressed={resolvedTheme === 'dark'}
+      className="relative w-12 h-6 bg-gray-200 dark:bg-gray-700 rounded-full transition-colors duration-300 cursor-pointer focus:outline-none"
+      aria-pressed={isDark}
+      aria-label="Toggle theme"
     >
-      {/* Icon crossfade/rotate */}
-      <span className="absolute inset-0 grid place-items-center">
-        <Sun
-          className={`h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-            resolvedTheme === 'dark'
-              ? 'opacity-0 -rotate-90 scale-75'
-              : 'opacity-100 rotate-0 scale-100'
-          }`}
-        />
-      </span>
-      <span className="absolute inset-0 grid place-items-center">
-        <Moon
-          className={`h-[1.2rem] w-[1.2rem] transition-all duration-300 ${
-            resolvedTheme === 'dark'
-              ? 'opacity-100 rotate-0 scale-100'
-              : 'opacity-0 rotate-90 scale-75'
-          }`}
-        />
-      </span>
-      <span className="sr-only">Toggle theme</span>
-    </Button>
+      {/* Sliding knob */}
+      <div
+        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-300 flex items-center justify-center ${
+          isDark ? 'translate-x-6' : 'translate-x-0.5'
+        }`}
+      >
+        {/* Show sun in dark mode, moon in light mode */}
+        {isDark ? (
+          <Sun className="h-3 w-3 text-gray-600" />
+        ) : (
+          <Moon className="h-3 w-3 text-gray-600" />
+        )}
+      </div>
+    </button>
   )
 }
