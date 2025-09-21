@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { signIn } from "next-auth/react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -26,19 +25,8 @@ export default function SignupPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Sign up failed");
-      // Attempt automatic sign-in with the new credentials
-      const result = await signIn("credentials", {
-        email: form.email,
-        password: form.password,
-        redirect: false,
-      });
-      if (result && !result.error) {
-        toast.success("Welcome! Your account was created.");
-        router.push("/dashboard");
-      } else {
-        toast.success("Account created. Please sign in.");
-        router.push("/auth");
-      }
+      toast.success("Account created. Please sign in.");
+      router.push("/auth");
     } catch (e: any) {
       toast.error(e?.message || "Sign up failed");
     } finally {
@@ -66,9 +54,7 @@ export default function SignupPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
             </div>
-            <Button type="submit" className="w-full" disabled={loading} aria-disabled={loading}>
-              {loading ? "Creating..." : "Create account"}
-            </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Creating..." : "Create account"}</Button>
             <p className="text-xs text-muted-foreground">Accounts default to OPERATOR role. Admins can update roles later.</p>
             <div className="text-sm text-muted-foreground mt-2">
               Already have an account? <Link href="/auth" className="text-foreground underline-offset-4 hover:underline">Sign in</Link>
