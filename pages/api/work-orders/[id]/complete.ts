@@ -73,26 +73,19 @@ export default requireRole(["ADMIN", "MANAGER", "OPERATOR"], async (req, res) =>
 
     const allCompleted = allWorkOrders.every((workOrder: any) => workOrder.status === "COMPLETED");
 
-    let updatedMO = null;
-    let stockConsumptionResult = null;
+  let updatedMO = null;
+  let stockConsumptionResult = null;
     let nextWorkOrder = null;
     
     if (allCompleted) {
-      // Complete the manufacturing order and handle stock consumption
-      updatedMO = await prisma.manufacturingOrder.update({
-        where: { id: wo.moId },
-        data: { state: "DONE" }
-      });
-
       try {
-        // Consume raw materials and produce finished goods
+        // Consume materials and complete MO inside stock.ts transaction
         stockConsumptionResult = await consumeStockForMO(wo.moId);
+        updatedMO = stockConsumptionResult.mo;
       } catch (stockError) {
         console.error("Stock consumption error:", stockError);
-        // MO is marked as DONE but stock consumption failed
-        // This should be handled in a real system (rollback or alert)
         return res.status(500).json({ 
-          error: "Manufacturing order completed but stock consumption failed",
+          error: "Failed to finalize manufacturing order due to stock operation",
           details: stockError instanceof Error ? stockError.message : "Unknown stock error"
         });
       }

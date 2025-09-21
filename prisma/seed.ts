@@ -137,7 +137,7 @@ async function main() {
 
   // Create BOMs for finished products
   const tableBom = await prisma.bOM.upsert({
-    where: { productId: table.id },
+    where: { productId_version: { productId: table.id, version: "v1.0" } },
     update: {},
     create: {
       productId: table.id,
@@ -152,7 +152,7 @@ async function main() {
   });
 
   const chairBom = await prisma.bOM.upsert({
-    where: { productId: chair.id },
+    where: { productId_version: { productId: chair.id, version: "v1.0" } },
     update: {},
     create: {
       productId: chair.id,

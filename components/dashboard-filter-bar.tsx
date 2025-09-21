@@ -12,9 +12,11 @@ interface Props {
   onStatusChange?: (status: string) => void
   onSearchChange?: (search: string) => void
   onDateRangeChange?: (startDate: Date | undefined, endDate: Date | undefined) => void
+  onExportClick?: () => void
+  onNewOrderClick?: () => void
 }
 
-export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRangeChange }: Props) {
+export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRangeChange, onExportClick, onNewOrderClick }: Props) {
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
   const [range, setRange] = useState<DateRange>({})
@@ -107,11 +109,18 @@ export function DashboardFilterBar({ onStatusChange, onSearchChange, onDateRange
 
   const right = (
     <>
-      <Button variant="default" className="h-10 bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow">
+      <Button
+        variant="default"
+        onClick={onExportClick}
+        className="h-10 bg-yellow-500 text-black hover:bg-yellow-400 active:scale-[0.98] transition-transform shadow-sm hover:shadow"
+      >
         <Download className="mr-2 h-4 w-4" />
         Export
       </Button>
-      <Button className="h-10 bg-primary text-primary-foreground hover:bg-primary/90">
+      <Button
+        onClick={onNewOrderClick}
+        className="h-10 bg-primary text-primary-foreground hover:bg-primary/90"
+      >
         <Plus className="mr-2 h-4 w-4" />
         New Order
       </Button>

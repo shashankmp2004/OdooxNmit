@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { KPICard } from "@/components/kpi-card"
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const { data: session } = useAuth()
+  const router = useRouter()
 
   const userRole = session?.user?.role || "OPERATOR"
 
@@ -122,6 +124,39 @@ export default function DashboardPage() {
     }
   }
 
+  // Handlers for toolbar actions
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
+      if (searchQuery) params.set('search', searchQuery)
+      if (startDate) params.set('startDate', startDate.toISOString())
+      if (endDate) params.set('endDate', endDate.toISOString())
+
+      const res = await fetch(`/api/mos/export?${params.toString()}`, {
+        method: 'GET'
+      })
+      if (!res.ok) throw new Error('Failed to export')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `manufacturing-orders-${Date.now()}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Export error', e)
+      alert('Failed to export. Please try again.')
+    }
+  }
+
+  const handleNewOrder = () => {
+    // Navigate to admin manufacturing orders page where creation dialog exists
+    router.push('/admin/manufacturing-orders')
+  }
+
   return (
     <ProtectedRoute allowedRoles={["OPERATOR", "INVENTORY", "MANAGER", "ADMIN"]}>
       <div className="flex h-screen bg-background">
@@ -203,6 +238,8 @@ export default function DashboardPage() {
                     onStatusChange={setStatusFilter}
                     onSearchChange={setSearchQuery}
                     onDateRangeChange={handleDateRangeChange}
+                    onExportClick={handleExport}
+                    onNewOrderClick={handleNewOrder}
                   />
 
                   {/* Manufacturing Orders Table */}

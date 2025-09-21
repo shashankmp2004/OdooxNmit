@@ -34,11 +34,14 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Completed orders in last 30 days
+      // Completed orders in last 30 days (prefer completedAt)
       prisma.manufacturingOrder.count({
         where: {
           state: "DONE",
-          updatedAt: { gte: thirtyDaysAgo },
+          OR: [
+            { completedAt: { gte: thirtyDaysAgo } },
+            { AND: [ { completedAt: null }, { updatedAt: { gte: thirtyDaysAgo } } ] },
+          ],
         },
       }),
 
@@ -46,7 +49,10 @@ export async function GET(request: NextRequest) {
       prisma.manufacturingOrder.aggregate({
         where: {
           state: "DONE",
-          updatedAt: { gte: thirtyDaysAgo },
+          OR: [
+            { completedAt: { gte: thirtyDaysAgo } },
+            { AND: [ { completedAt: null }, { updatedAt: { gte: thirtyDaysAgo } } ] },
+          ],
         },
         _avg: {
           quantity: true, // Using quantity as a proxy for lead time
@@ -57,7 +63,10 @@ export async function GET(request: NextRequest) {
       prisma.manufacturingOrder.count({
         where: {
           state: "DONE",
-          updatedAt: { gte: thirtyDaysAgo },
+          OR: [
+            { completedAt: { gte: thirtyDaysAgo } },
+            { AND: [ { completedAt: null }, { updatedAt: { gte: thirtyDaysAgo } } ] },
+          ],
           deadline: { gte: now },
         },
       }),
@@ -66,7 +75,10 @@ export async function GET(request: NextRequest) {
       prisma.manufacturingOrder.count({
         where: {
           state: "DONE",
-          updatedAt: { gte: thirtyDaysAgo },
+          OR: [
+            { completedAt: { gte: thirtyDaysAgo } },
+            { AND: [ { completedAt: null }, { updatedAt: { gte: thirtyDaysAgo } } ] },
+          ],
         },
       }),
 
@@ -82,7 +94,10 @@ export async function GET(request: NextRequest) {
       prisma.manufacturingOrder.aggregate({
         where: {
           state: "DONE",
-          updatedAt: { gte: thirtyDaysAgo },
+          OR: [
+            { completedAt: { gte: thirtyDaysAgo } },
+            { AND: [ { completedAt: null }, { updatedAt: { gte: thirtyDaysAgo } } ] },
+          ],
         },
         _sum: {
           quantity: true,
@@ -100,7 +115,10 @@ export async function GET(request: NextRequest) {
       prisma.manufacturingOrder.aggregate({
         where: {
           state: "DONE",
-          updatedAt: { gte: thirtyDaysAgo },
+          OR: [
+            { completedAt: { gte: thirtyDaysAgo } },
+            { AND: [ { completedAt: null }, { updatedAt: { gte: thirtyDaysAgo } } ] },
+          ],
         },
         _avg: {
           quantity: true,
@@ -129,10 +147,10 @@ export async function GET(request: NextRequest) {
       prisma.manufacturingOrder.count({
         where: {
           state: "DONE",
-          updatedAt: { 
-            gte: subMonths(thirtyDaysAgo, 1),
-            lt: thirtyDaysAgo,
-          },
+          OR: [
+            { completedAt: { gte: subMonths(thirtyDaysAgo, 1), lt: thirtyDaysAgo } },
+            { AND: [ { completedAt: null }, { updatedAt: { gte: subMonths(thirtyDaysAgo, 1), lt: thirtyDaysAgo } } ] },
+          ],
         },
       }),
     ])

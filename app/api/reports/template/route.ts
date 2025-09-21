@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 
+// Ensure Node.js runtime for XLSX buffer generation
+export const runtime = 'nodejs'
+
 export async function GET() {
   try {
     // Create sample data for the Excel template

@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { getRoutingForProduct, resolveWorkCenterIdByName } from "@/lib/routing";
 
 const createMOSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -123,20 +124,20 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           });
         }
 
-        // Verify product exists and has BOM
+        // Verify product exists and load active BOM (new structure preferred)
         const product = await prisma.product.findUnique({
           where: { id: parsed.data.productId },
           include: {
-            bom: {
+            boms: {
+              where: { isActive: true },
               include: {
-                components: {
-                  include: {
-                    material: true
-                  }
-                }
-              }
-            }
-          }
+                items: { include: { component: true } },
+                components: { include: { material: true } }, // fallback
+              },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
         });
 
         if (!product) {
@@ -147,13 +148,23 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           return res.status(400).json({ error: "Can only create MO for finished products" });
         }
 
-        // Get BOM snapshot
-        const bomSnapshot = product.bom?.components.map((c: any) => ({
-          materialId: c.materialId,
-          materialName: c.material.name,
-          materialSku: c.material.sku,
-          qtyPerUnit: c.qtyPerUnit
-        })) || null;
+        // Get BOM snapshot (prefer new BOMItem list, fallback to old components)
+        const activeBOM = product.boms?.[0] || null;
+        const bomSnapshot = activeBOM
+          ? (activeBOM.items.length > 0
+              ? activeBOM.items.map((i: any) => ({
+                  materialId: i.componentId,
+                  materialName: i.component?.name,
+                  materialSku: i.component?.sku,
+                  qtyPerUnit: i.quantity,
+                }))
+              : activeBOM.components.map((c: any) => ({
+                  materialId: c.materialId,
+                  materialName: c.material?.name,
+                  materialSku: c.material?.sku,
+                  qtyPerUnit: c.qtyPerUnit,
+                })))
+          : null;
 
         // Generate unique order number
         const orderNo = `MO-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
@@ -176,6 +187,28 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
             workOrders: true
           }
         });
+
+        // Auto-generate initial Work Orders based on routing
+        try {
+          const route = await getRoutingForProduct(mo.productId);
+          if (route.length > 0) {
+            for (const step of route) {
+              const wcId = await resolveWorkCenterIdByName(step);
+              await prisma.workOrder.create({
+                data: {
+                  moId: mo.id,
+                  title: `${step} - ${mo.name}`,
+                  taskName: step,
+                  status: "PENDING",
+                  priority: "MEDIUM",
+                  workCenterId: wcId || undefined,
+                },
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("Auto-generation of Work Orders failed:", e);
+        }
 
         return res.status(201).json(mo);
       } catch (error) {

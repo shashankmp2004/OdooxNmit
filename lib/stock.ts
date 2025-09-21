@@ -186,10 +186,10 @@ export async function consumeStockForMO(moId: string): Promise<{
       description: `Produced from MO ${mo.orderNo}`
     }, tx);
 
-    // Mark MO as completed
+    // Mark MO as completed with completedAt set
     const updatedMO = await tx.manufacturingOrder.update({
       where: { id: moId },
-      data: { state: "DONE" }
+      data: { state: "DONE", completedAt: new Date() }
     });
 
     return {

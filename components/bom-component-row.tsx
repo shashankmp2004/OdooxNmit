@@ -22,10 +22,10 @@ interface BOMComponentRowProps {
 
 export function BOMComponentRow({ component, onUpdate, onRemove, availableComponents }: BOMComponentRowProps) {
   return (
-    <div className="grid grid-cols-12 gap-4 items-center p-4 bg-muted/30 rounded-lg border border-border">
+  <div className="grid grid-cols-12 gap-4 items-center p-4 bg-muted/30 rounded-lg border border-border shadow-sm">
       <div className="col-span-4">
         <Select value={component.name} onValueChange={(value) => onUpdate(component.id, "name", value)}>
-          <SelectTrigger className="bg-background border-input">
+          <SelectTrigger className="bg-background border-input h-10 rounded-md text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <SelectValue placeholder="Select component" />
           </SelectTrigger>
           <SelectContent>
@@ -44,13 +44,13 @@ export function BOMComponentRow({ component, onUpdate, onRemove, availableCompon
           placeholder="Quantity"
           value={component.quantity || ""}
           onChange={(e) => onUpdate(component.id, "quantity", Number.parseFloat(e.target.value) || 0)}
-          className="bg-background border-input"
+          className="bg-background border-input h-10 rounded-md text-base placeholder:text-muted-foreground/70 shadow-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />
       </div>
 
       <div className="col-span-2">
         <Select value={component.unit} onValueChange={(value) => onUpdate(component.id, "unit", value)}>
-          <SelectTrigger className="bg-background border-input">
+          <SelectTrigger className="bg-background border-input h-10 rounded-md text-base focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
             <SelectValue placeholder="Unit" />
           </SelectTrigger>
           <SelectContent>
@@ -72,7 +72,7 @@ export function BOMComponentRow({ component, onUpdate, onRemove, availableCompon
           placeholder="Cost ($)"
           value={component.cost || ""}
           onChange={(e) => onUpdate(component.id, "cost", Number.parseFloat(e.target.value) || 0)}
-          className="bg-background border-input"
+          className="bg-background border-input h-10 rounded-md text-base placeholder:text-muted-foreground/70 shadow-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />
       </div>
 

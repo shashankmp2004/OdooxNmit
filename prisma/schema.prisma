@@ -151,6 +151,7 @@ model ManufacturingOrder {
   quantity     Int
   state        OrderState @default(PLANNED)
   deadline     DateTime?
+  completedAt  DateTime?
   bomSnapshot  Json?      // store BOM at order creation time (components array)
   workOrders   WorkOrder[]
   createdBy    User?      @relation("CreatedBy", fields: [createdById], references: [id])
