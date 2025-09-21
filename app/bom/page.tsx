@@ -228,6 +228,7 @@ export default function BOMPage() {
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             rows={3}
+                            className="mt-2"
                           />
                         </div>
                       </div>
