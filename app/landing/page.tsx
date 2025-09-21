@@ -419,97 +419,85 @@ export default function LandingPage() {
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Left Column */}
             <div className="space-y-8">
-              <Card className="relative p-8 border border-white/20 bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
-                {/* White noise overlay */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="w-full h-full opacity-[0.07] bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAACXBIWXMAAAsSAAALEgHS3X78AAAAU0lEQVR4nO3PMQEAAAQAMM5f9F3HChYk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gnkJ7MEIJmP0XZZAAAAAElFTkSuQmCC')] bg-repeat"></div>
-                </div>
-
-                <div className="flex items-start space-x-4 relative z-10">
-                  <BarChart3 className="h-8 w-8 text-primary flex-shrink-0" />
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                      Real-time Analytics
-                    </h3>
-                    <p className="text-muted-foreground text-pretty">
-                      Monitor production metrics, track KPIs, and get instant
-                      insights into your manufacturing operations with
-                      comprehensive dashboards.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="relative p-8 border border-white/20 bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="w-full h-full opacity-[0.07] bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAACXBIWXMAAAsSAAALEgHS3X78AAAAU0lEQVR4nO3PMQEAAAQAMM5f9F3HChYk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gnkJ7MEIJmP0XZZAAAAAElFTkSuQmCC')] bg-repeat"></div>
-                </div>
-
-                <div className="flex items-start space-x-4 relative z-10">
-                  <Users className="h-8 w-8 text-primary flex-shrink-0" />
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                      Role-based Access
-                    </h3>
-                    <p className="text-muted-foreground text-pretty">
-                      Secure, role-based dashboards for managers, operators, and
-                      inventory teams. Each user sees exactly what they need to
-                      be productive.
-                    </p>
-                  </div>
-                </div>
-              </Card>
+              {[
+                {
+                  icon: BarChart3,
+                  title: "Real-time Analytics",
+                  description:
+                    "Monitor production metrics, track KPIs, and get instant insights into your manufacturing operations with comprehensive dashboards."
+                },
+                {
+                  icon: Users,
+                  title: "Role-based Access",
+                  description:
+                    "Secure, role-based dashboards for managers, operators, and inventory teams. Each user sees exactly what they need to be productive."
+                }
+              ].map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: idx * 0.2 }}
+                    className="p-8 bg-card/50 border-border/50 backdrop-blur-md rounded-2xl shadow-xl hover:scale-105 hover:shadow-2xl transition-transform duration-300"
+                  >
+                    <div className="flex items-start space-x-4">
+                      <Icon className="h-8 w-8 text-primary flex-shrink-0 drop-shadow-lg transition-all duration-300 hover:scale-110" />
+                      <div>
+                        <h3 className="text-xl font-semibold text-foreground border-b-2 border-primary/40 inline-block pb-1">
+                          {item.title}
+                        </h3>
+                        <p className="text-muted-foreground text-pretty mt-2">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
 
             {/* Right Column */}
-            <div className="relative">
-              <Card className="relative p-6 border border-white/20 bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="w-full h-full opacity-[0.07] bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAACXBIWXMAAAsSAAALEgHS3X78AAAAU0lEQVR4nO3PMQEAAAQAMM5f9F3HChYk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gkk0gnkJ7MEIJmP0XZZAAAAAElFTkSuQmCC')] bg-repeat"></div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="relative p-6 bg-card/50 border-border/50 backdrop-blur-md rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-300"
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b-2 border-primary/30 pb-1">
+                  <h4 className="font-semibold text-foreground">Production Overview</h4>
+                  <Badge variant="secondary">Live</Badge>
                 </div>
-
-                <div className="space-y-4 relative z-10">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-foreground">
-                      Production Overview
-                    </h4>
-                    <Badge variant="secondary">Live</Badge>
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">94%</div>
+                    <div className="text-sm text-muted-foreground">Efficiency</div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-background/50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-primary">94%</div>
-                      <div className="text-sm text-muted-foreground">
-                        Efficiency
-                      </div>
-                    </div>
-                    <div className="bg-background/50 p-4 rounded-lg text-center">
-                      <div className="text-2xl font-bold text-chart-2">127</div>
-                      <div className="text-sm text-muted-foreground">
-                        Active Orders
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Production Line A
-                      </span>
-                      <Badge className="bg-status-completed/20 text-status-completed border-status-completed/30">
-                        Running
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Production Line B
-                      </span>
-                      <Badge className="bg-status-in-progress/20 text-status-in-progress border-status-in-progress/30">
-                        Maintenance
-                      </Badge>
-                    </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-chart-2">127</div>
+                    <div className="text-sm text-muted-foreground">Active Orders</div>
                   </div>
                 </div>
-              </Card>
-            </div>
+                <div className="space-y-2 mt-4">
+                  <div className="flex items-center justify-between text-sm border-b border-primary/20 pb-1">
+                    <span className="text-muted-foreground">Production Line A</span>
+                    <Badge className="bg-status-completed/20 text-status-completed border-status-completed/30">
+                      Running
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm border-b border-primary/20 pb-1">
+                    <span className="text-muted-foreground">Production Line B</span>
+                    <Badge className="bg-status-in-progress/20 text-status-in-progress border-status-in-progress/30">
+                      Maintenance
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </motion.section>
