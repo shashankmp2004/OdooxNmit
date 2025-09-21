@@ -177,7 +177,7 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
         // Compute routing up front
         const route = await getRoutingForProduct(parsed.data.productId);
 
-        // Create MO and initial WOs atomically
+    // Create MO and initial WOs atomically
   const created = await prisma.$transaction(async (tx: PrismaClient) => {
           const createdMO = await tx.manufacturingOrder.create({
             data: {
@@ -193,6 +193,16 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
           if (route.length > 0) {
             for (const step of route) {
               const wcId = await resolveWorkCenterIdByName(step);
+              // Derive estimated time in hours from work center capacity (units/hour) or default to 1h
+              let estimatedTime = 1; // default 1 hour if no capacity data
+              let machineWorkCenter: string | null = step;
+              if (wcId) {
+                const wc = await tx.workCenter.findUnique({ where: { id: wcId }, select: { capacity: true, name: true } });
+                machineWorkCenter = wc?.name || step;
+                if (wc?.capacity && wc.capacity > 0) {
+                  estimatedTime = parsed.data.quantity / wc.capacity;
+                }
+              }
               await tx.workOrder.create({
                 data: {
                   moId: createdMO.id,
@@ -201,6 +211,8 @@ export default requireRole(["ADMIN", "MANAGER"], async (req, res) => {
                   status: "PENDING",
                   priority: "MEDIUM",
                   workCenterId: wcId || undefined,
+                  machineWorkCenter: machineWorkCenter || undefined,
+                  estimatedTime,
                 },
               });
             }

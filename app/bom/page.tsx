@@ -188,8 +188,11 @@ export default function BOMPage() {
         description: description || undefined,
         priority: 'MEDIUM',
       }
+      // If UI has an estimate use it; otherwise fallback to 1 hour default
       if (estimatedTime && estimatedTime > 0) {
         woPayload.estimatedTime = estimatedTime
+      } else {
+        woPayload.estimatedTime = 1
       }
 
       const woRes = await fetch('/api/work-orders', {
